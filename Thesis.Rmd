@@ -1,0 +1,2417 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+
+```{r}
+#install.packages("edgarWebR")
+library(edgarWebR)
+#install.packages("xml2")
+library(xml2)
+library(XBRL)
+library(tidyr)
+library(dplyr)
+library(XBRL)
+
+setwd("C:/Users/jelto/OneDrive/Bureaublad/Eur/Master BAM/Thesis/Final")
+Tickers <- read.csv("Tickers.csv")
+tickers <- as.character(Tickers$Ticker[5465:7236])
+
+Final <- data.frame(Ticker = character(),
+                  Date = character(),
+                  Link = character(), stringsAsFactors = FALSE)
+
+for(ticker in tickers){
+## Create empty temporary dataframe   
+tmp <- data.frame(Ticker = character(),
+                  Date = character(),
+                  Link = character(), stringsAsFactors = FALSE)
+
+## Obtain the 10-K filings of all tickers
+Document_list <- try(company_filings(ticker, ownership = FALSE, type = "10-K", count = 40, page = 1),TRUE)
+if(isTRUE(class(Document_list)=='try-error')){
+  Document_list <- try(company_filings(ticker, ownership = FALSE, type = "10-K", count = 40, page = 1),TRUE)
+}
+if(isTRUE(class(Document_list)=='try-error')){
+  Document_list <- try(company_filings(ticker, ownership = FALSE, type = "10-K", count = 40, page = 1),TRUE)
+}
+if(isTRUE(class(Document_list)=='try-error')){
+  Document_list <- try(company_filings(ticker, ownership = FALSE, type = "10-K", count = 40, page = 1),TRUE)
+}
+if(isTRUE(class(Document_list)=='try-error')){
+  Document_list <- try(company_filings(ticker, ownership = FALSE, type = "10-K", count = 40, page = 1),TRUE)
+}
+if(isTRUE(class(Document_list)=='try-error')){
+  Document_list <- try(company_filings(ticker, ownership = FALSE, type = "10-K", count = 40, page = 1),TRUE)
+}
+if(isTRUE(class(Document_list)=='try-error')){
+  Document_list <- try(company_filings(ticker, ownership = FALSE, type = "10-K", count = 40, page = 1),TRUE)
+}
+if(isTRUE(class(Document_list)=='try-error')){
+  next
+}
+
+## Per ticker per year, obtain the characteristics of the filings to be able to locate the XBRL instance document
+if(nrow(Document_list)>0){
+for(j in 1:nrow(Document_list)){
+  tmp[j,1] <- ticker
+  tmp[j,2] <- as.character(Document_list$filing_date[j])
+Details <- try(filing_details(Document_list$href[j]),TRUE)
+if(isTRUE(class(Details)=='try-error')){
+  Details <- try(filing_details(Document_list$href[j]),TRUE)
+}
+if(isTRUE(class(Details)=='try-error')){
+  Details <- try(filing_details(Document_list$href[j]),TRUE)
+}
+if(isTRUE(class(Details)=='try-error')){
+  Details <- try(filing_details(Document_list$href[j]),TRUE)
+}
+if(isTRUE(class(Details)=='try-error')){
+  Details <- try(filing_details(Document_list$href[j]),TRUE)
+}
+if(isTRUE(class(Details)=='try-error')){
+  Details <- try(filing_details(Document_list$href[j]),TRUE)
+}
+if(isTRUE(class(Details)=='try-error')){
+  Details <- try(filing_details(Document_list$href[j]),TRUE)
+}
+if(isTRUE(class(Details)=='try-error')){
+  next
+}
+## Locate either the EX-101.INS or the XML document reference
+for(k in 1:length(Details$documents$type))
+if(Details$documents$type[k] == "EX-101.INS"){
+  tmp[j,3] <- Details$documents$href[k]
+}
+if(Details$documents$type[k] == "XML"){
+  tmp[j,3] <- Details$documents$href[k]
+}
+}
+}
+Final <- rbind(Final, tmp)
+Sys.sleep(2)
+}
+#write.csv(Final, "IntermediateOutput2.csv")
+
+FinalS1 <- read.csv("IntermediateOutput.csv")
+FinalS2 <- read.csv("IntermediateOutput2.csv")
+FinalS1 <- FinalS1[-1]
+FinalS2 <- FinalS2[-1]
+Final <- rbind(FinalS1, FinalS2)
+Final2 <- Final[!is.na(Final$Link),]
+Final2 <- Final2[format(as.Date(Final2$Date, format="%Y-%m-%d"),"%Y")>2011,]
+
+trace('XBRL', edit=TRUE)
+# Line 13
+# if (!(substr(file.name, 1, 5) %in% c("http:", "https"))) {
+
+
+
+#write.csv(Dataframe2, "FirstSample.csv", row.names = FALSE)
+Dataframe <- data.frame()
+
+for(i in 15614:20000){
+  inst <- Final2$Link[i]
+  options(stringsAsFactors = FALSE)
+  xbrl.vars <- try(xbrlDoAll(as.character(inst),cache.dir = "XBRLcache",prefix.out = NULL, verbose=FALSE),TRUE)
+  if(isTRUE(class(xbrl.vars)=='try-error')){
+  xbrl.vars <- try(xbrlDoAll(as.character(inst),cache.dir = "XBRLcache",prefix.out = NULL, verbose=FALSE),TRUE)}
+  if(isTRUE(class(xbrl.vars)=='try-error')){
+  xbrl.vars <- try(xbrlDoAll(as.character(inst),cache.dir = "XBRLcache",prefix.out = NULL, verbose=FALSE),TRUE)}
+  if(isTRUE(class(xbrl.vars)=='try-error')){
+  xbrl.vars <- try(xbrlDoAll(as.character(inst),cache.dir = "XBRLcache",prefix.out = NULL, verbose=FALSE),TRUE)}
+  if(isTRUE(class(xbrl.vars)=='try-error')){
+  xbrl.vars <- try(xbrlDoAll(as.character(inst),cache.dir = "XBRLcache",prefix.out = NULL, verbose=FALSE),TRUE)}
+  if(isTRUE(class(xbrl.vars)=='try-error')){
+  next}
+  tmp <- xbrl.vars$fact  %>%
+    left_join(xbrl.vars$context, by = "contextId") %>% 
+    filter(is.na(dimension1)) %>% 
+    left_join(xbrl.vars$unit, by = "unitId") %>%
+    left_join(xbrl.vars$element, by = "elementId") %>%
+    select(startDate, endDate, measure, fact, decimals, unitId, elementId, periodType) %>%  
+    distinct()
+  tmp$Ticker <- Final2$Ticker[i]
+  tmp$Publication <- Final2$Date[i]
+  date <- tmp$fact[which(tmp$elementId == "dei_DocumentPeriodEndDate")]
+  if(length(tmp$fact[which(tmp$elementId == "dei_DocumentFiscalYearFocus")]) == 1){
+  tmp$Year <- tmp$fact[which(tmp$elementId == "dei_DocumentFiscalYearFocus")]}
+  tmp <- tmp[!is.na(tmp$decimals),]
+  tmp$startDate <- gsub("[\t\n]", "", tmp$startDate)
+  tmp$endDate <- gsub("[\t\n]", "", tmp$endDate)
+  tmp$diff_in_days <- as.numeric(difftime(as.character(tmp$endDate), as.character(tmp$startDate), units = c("days")))
+  tmp <- tmp[!(tmp$periodType == "duration"& tmp$diff_in_days<360),]
+  tmp <- tmp[tmp$endDate == date,]
+  tmp <- tmp[-c(1,3,5,6,8,12)]
+  tmp <- tmp[!duplicated(tmp[ , c("elementId","endDate")]),]
+  tmp <- tmp %>% spread(elementId, fact)
+  Dataframe <- bind_rows(Dataframe,tmp)
+}
+
+write.csv(Dataframe, "DataframeV8.1.csv", row.names = FALSE)
+
+```
+
+
+```{r}
+
+library(tidyverse)
+library(readr)
+library(tibble)
+Complete <- data.frame()
+tmp <- read_csv("DataframeV3.csv", col_types = cols(.default = col_character()))
+tmp <- tmp[,c(1,2,3,4,which(grepl("us-gaap_", colnames(tmp), fixed = TRUE)))]
+Complete <- bind_rows(Complete,tmp)
+rm(tmp)
+
+tmp <- read_csv("DataframeV5.csv", col_types = cols(.default = col_character()))
+tmp <- tmp[,c(1,2,3,4,which(grepl("us-gaap_", colnames(tmp), fixed = TRUE)))]
+Complete <- bind_rows(Complete,tmp)
+rm(tmp)
+
+tmp <- read_csv("DataframeV6.csv", col_types = cols(.default = col_character()))
+tmp <- tmp[,c(1,2,3,4,which(grepl("us-gaap_", colnames(tmp), fixed = TRUE)))]
+Complete <- bind_rows(Complete,tmp)
+rm(tmp)
+
+tmp <- read_csv("DataframeV7.csv", col_types = cols(.default = col_character()))
+tmp <- tmp[,c(1,2,3,4,which(grepl("us-gaap_", colnames(tmp), fixed = TRUE)))]
+Complete <- bind_rows(Complete,tmp)
+rm(tmp)
+
+tmp <- read_csv("DataframeV8.csv", col_types = cols(.default = col_character()))
+tmp <- tmp[,c(1,2,3,4,which(grepl("us-gaap_", colnames(tmp), fixed = TRUE)))]
+Complete <- bind_rows(Complete,tmp)
+rm(tmp)
+
+tmp <- read_csv("DataframeV8.1.csv", col_types = cols(.default = col_character()))
+tmp <- tmp[,c(1,2,3,4,which(grepl("us-gaap_", colnames(tmp), fixed = TRUE)))]
+Complete <- bind_rows(Complete,tmp)
+rm(tmp)
+
+tmp <- read_csv("DataframeV9.csv", col_types = cols(.default = col_character()))
+tmp <- tmp[,c(1,2,3,4,which(grepl("us-gaap_", colnames(tmp), fixed = TRUE)))]
+Complete <- bind_rows(Complete,tmp)
+rm(tmp)
+
+tmp <- read_csv("DataframeA2.csv", col_types = cols(.default = col_character()))
+tmp <- tmp[,c(1,2,3,4,which(grepl("us-gaap_", colnames(tmp), fixed = TRUE)))]
+Complete <- bind_rows(Complete,tmp)
+rm(tmp)
+
+tmp <- read_csv("DataframeA3.csv", col_types = cols(.default = col_character()))
+tmp <- tmp[,c(1,2,3,4,which(grepl("us-gaap_", colnames(tmp), fixed = TRUE)))]
+Complete <- bind_rows(Complete,tmp)
+rm(tmp)
+
+tmp <- read_csv("DataframeA4.1.csv", col_types = cols(.default = col_character()))
+tmp <- tmp[,c(1,2,3,4,which(grepl("us-gaap_", colnames(tmp), fixed = TRUE)))]
+Complete <- bind_rows(Complete,tmp)
+rm(tmp)
+
+tmp <- read_csv("DataframeA4.2.csv", col_types = cols(.default = col_character()))
+tmp <- tmp[,c(1,2,3,4,which(grepl("us-gaap_", colnames(tmp), fixed = TRUE)))]
+Complete <- bind_rows(Complete,tmp)
+rm(tmp)
+
+tmp <- read_csv("DataframeA4.2.1.csv", col_types = cols(.default = col_character()))
+tmp <- tmp[,c(1,2,3,4,which(grepl("us-gaap_", colnames(tmp), fixed = TRUE)))]
+Complete <- bind_rows(Complete,tmp)
+rm(tmp)
+
+tmp <- read_csv("DataframeV10.1.csv", col_types = cols(.default = col_character()))
+tmp <- tmp[,c(1,2,3,4,which(grepl("us-gaap_", colnames(tmp), fixed = TRUE)))]
+Complete <- bind_rows(Complete,tmp)
+rm(tmp)
+
+tmp <- read_csv("DataframeA1.csv", col_types = cols(.default = col_character()))
+tmp <- tmp[,c(1,2,3,4,which(grepl("us-gaap_", colnames(tmp), fixed = TRUE)))]
+Complete <- bind_rows(Complete,tmp)
+rm(tmp)
+
+tmp <- read_csv("DataframeV10.csv", col_types = cols(.default = col_character()))
+tmp <- tmp[,c(1,2,3,4,which(grepl("us-gaap_", colnames(tmp), fixed = TRUE)))]
+Complete <- bind_rows(Complete,tmp)
+rm(tmp)
+
+tmp <- read_csv("DataframeA5.csv", col_types = cols(.default = col_character()))
+tmp <- tmp[,c(1,2,3,4,which(grepl("us-gaap_", colnames(tmp), fixed = TRUE)))]
+Complete <- bind_rows(Complete,tmp)
+rm(tmp)
+
+tmp <- read_csv("DataframeA6.1.csv", col_types = cols(.default = col_character()))
+tmp <- tmp[,c(1,2,3,4,which(grepl("us-gaap_", colnames(tmp), fixed = TRUE)))]
+Complete <- bind_rows(Complete,tmp)
+rm(tmp)
+
+tmp <- read_csv("DataframeA6.2.csv", col_types = cols(.default = col_character()))
+tmp <- tmp[,c(1,2,3,4,which(grepl("us-gaap_", colnames(tmp), fixed = TRUE)))]
+Complete <- bind_rows(Complete,tmp)
+rm(tmp)
+
+tmp <- read_csv("DataframeA6.3.csv", col_types = cols(.default = col_character()))
+tmp <- tmp[,c(1,2,3,4,which(grepl("us-gaap_", colnames(tmp), fixed = TRUE)))]
+Complete <- bind_rows(Complete,tmp)
+rm(tmp)
+
+tmp <- read_csv("DataframeA6.3.1.csv", col_types = cols(.default = col_character()))
+tmp <- tmp[,c(1,2,3,4,which(grepl("us-gaap_", colnames(tmp), fixed = TRUE)))]
+Complete <- bind_rows(Complete,tmp)
+rm(tmp)
+
+tmp <- read_csv("DataframeA7.12.csv", col_types = cols(.default = col_character()))
+tmp <- tmp[,c(1,2,3,4,which(grepl("us-gaap_", colnames(tmp), fixed = TRUE)))]
+Complete <- bind_rows(Complete,tmp)
+rm(tmp)
+
+tmp <- read_csv("DataframeA7.12.1.csv", col_types = cols(.default = col_character()))
+tmp <- tmp[,c(1,2,3,4,which(grepl("us-gaap_", colnames(tmp), fixed = TRUE)))]
+Complete <- bind_rows(Complete,tmp)
+rm(tmp)
+
+tmp <- read_csv("DataframeA7.3.csv", col_types = cols(.default = col_character()))
+tmp <- tmp[,c(1,2,3,4,which(grepl("us-gaap_", colnames(tmp), fixed = TRUE)))]
+Complete <- bind_rows(Complete,tmp)
+rm(tmp)
+
+tmp <- read_csv("DataframeA8.csv", col_types = cols(.default = col_character()))
+tmp <- tmp[,c(1,2,3,4,which(grepl("us-gaap_", colnames(tmp), fixed = TRUE)))]
+Complete <- bind_rows(Complete,tmp)
+rm(tmp)
+
+tmp <- read_csv("DataframeA9.1.csv", col_types = cols(.default = col_character()))
+tmp <- tmp[,c(1,2,3,4,which(grepl("us-gaap_", colnames(tmp), fixed = TRUE)))]
+Complete <- bind_rows(Complete,tmp)
+rm(tmp)
+
+tmp <- read_csv("DataframeA9.2.csv", col_types = cols(.default = col_character()))
+tmp <- tmp[,c(1,2,3,4,which(grepl("us-gaap_", colnames(tmp), fixed = TRUE)))]
+Complete <- bind_rows(Complete,tmp)
+rm(tmp)
+
+tmp <- read_csv("DataframeA9.3.csv", col_types = cols(.default = col_character()))
+tmp <- tmp[,c(1,2,3,4,which(grepl("us-gaap_", colnames(tmp), fixed = TRUE)))]
+Complete <- bind_rows(Complete,tmp)
+rm(tmp)
+
+tmp <- read_csv("DataframeA10.csv", col_types = cols(.default = col_character()))
+tmp <- tmp[,c(1,2,3,4,which(grepl("us-gaap_", colnames(tmp), fixed = TRUE)))]
+Complete <- bind_rows(Complete,tmp)
+rm(tmp)
+
+tmp <- read_csv("DataframeA11.csv", col_types = cols(.default = col_character()))
+tmp <- tmp[,c(1,2,3,4,which(grepl("us-gaap_", colnames(tmp), fixed = TRUE)))]
+Complete <- bind_rows(Complete,tmp)
+rm(tmp)
+
+tmp <- read_csv("DataframeA12.csv", col_types = cols(.default = col_character()))
+tmp <- tmp[,c(1,2,3,4,which(grepl("us-gaap_", colnames(tmp), fixed = TRUE)))]
+Complete <- bind_rows(Complete,tmp)
+rm(tmp)
+
+tmp <- read_csv("DataframeLast.csv", col_types = cols(.default = col_character()))
+tmp <- tmp[,c(1,2,3,4,which(grepl("us-gaap_", colnames(tmp), fixed = TRUE)))]
+Complete <- bind_rows(Complete,tmp)
+rm(tmp)
+
+tmp <- read_csv("DataframeLast1.csv", col_types = cols(.default = col_character()))
+tmp <- tmp[,c(1,2,3,4,which(grepl("us-gaap_", colnames(tmp), fixed = TRUE)))]
+Complete <- bind_rows(Complete,tmp)
+rm(tmp)
+
+tmp <- read_csv("DataframeLast2.csv", col_types = cols(.default = col_character()))
+tmp <- tmp[,c(1,2,3,4,which(grepl("us-gaap_", colnames(tmp), fixed = TRUE)))]
+Complete <- bind_rows(Complete,tmp)
+rm(tmp)
+
+tmp <- read_csv("DataframeLast3.csv", col_types = cols(.default = col_character()))
+tmp <- tmp[,c(1,2,3,4,which(grepl("us-gaap_", colnames(tmp), fixed = TRUE)))]
+Complete <- bind_rows(Complete,tmp)
+rm(tmp)
+
+tmp <- read_csv("DataframeLast4.csv", col_types = cols(.default = col_character()))
+tmp <- tmp[,c(1,2,3,4,which(grepl("us-gaap_", colnames(tmp), fixed = TRUE)))]
+Complete <- bind_rows(Complete,tmp)
+rm(tmp)
+Complete <- Complete %>% distinct()
+Complete[rowSums(is.na(Complete)) < 8000,]
+Complete[,colSums(is.na(Complete)) > 30000]
+
+#write.csv(Complete, "completeMatch.csv", row.names = FALSE)
+
+```
+
+
+```{r}
+Comp <- Complete[,colSums(is.na(Complete))<17000]
+Compare <- read.csv("Compustat-Compare.csv")
+Comp$endDate <- as.character(as.Date(Comp$endDate))
+Compare$endDate <- as.character(as.Date(as.character(Compare$datadate ),format="%Y%m%d"))
+Compare$Ticker <- Compare$tic
+tmp <- left_join(Comp, Compare, by = c("endDate", "Ticker"))
+tmp <- tmp %>% distinct(endDate, Ticker, .keep_all = TRUE)
+
+
+tmp$diff1 <- (tmp$us.gaap_AccountsPayableCurrent.y*1000000 - tmp$us.gaap_AccountsPayableCurrent.x)^2
+tmp$diff2 <- (tmp$us.gaap_AccountsReceivableNetCurrent*1000000 - tmp$us.gaap_AccountsReceivableNetCurrent.x)^2
+tmp$diff3 <- (tmp$us.gaap_AccumulatedDepreciationDepletionAndAmortizationPropertyPlantAndEquipment.y *1000000 - tmp$us.gaap_AccumulatedDepreciationDepletionAndAmortizationPropertyPlantAndEquipment.x)^2
+tmp$diff4 <- (tmp$us.gaap_AccumulatedOtherComprehensiveIncomeLossNetOfTax.y*1000000 - tmp$us.gaap_AccumulatedOtherComprehensiveIncomeLossNetOfTax.x)^2 
+tmp$diff5 <- (tmp$us.gaap_Assets.y*1000000 - tmp$us.gaap_Assets.x)^2 
+tmp$diff6 <- (tmp$us.gaap_AssetsCurrent.y*1000000 - tmp$us.gaap_AssetsCurrent.x)^2
+tmp$diff7 <- (tmp$us.gaap_CashAndCashEquivalentsAtCarryingValue.y*1000000 - tmp$us.gaap_CashAndCashEquivalentsAtCarryingValue.x)^2
+tmp$diff8 <- (tmp$us.gaap_CommonStockValue.y*1000000 - tmp$us.gaap_CommonStockValue.x)^2
+tmp$diff9 <- (tmp$us.gaap_Goodwill.y*1000000 - tmp$us.gaap_Goodwill.x)^2
+tmp$diff10 <- (tmp$us.gaap_LiabilitiesCurrent.y*1000000 - tmp$us.gaap_LiabilitiesCurrent.x)^2
+tmp$diff11 <- (tmp$us.gaap_PropertyPlantAndEquipmentGross.y*1000000 - tmp$us.gaap_PropertyPlantAndEquipmentGross.x)^2
+tmp$diff12 <- (tmp$us.gaap_StockholdersEquity.y*1000000 - tmp$us.gaap_StockholdersEquity.x)^2
+tmp$diff13 <- (tmp$us.gaap_NetIncomeLoss.y*1000000 - tmp$us.gaap_NetIncomeLoss.x)^2
+tmp$diff14 <- (tmp$us.gaap_EarningsPerShareBasic.y - tmp$us.gaap_EarningsPerShareBasic.x)^2
+tmp$diff15 <- (tmp$us.gaap_EarningsPerShareDiluted.y - tmp$us.gaap_EarningsPerShareDiluted.y)^2
+tmp$diff16 <- (tmp$us.gaap_Liabilities.y - tmp$us.gaap_Liabilities.x)^2
+tmp$diff17 <- (tmp$us.gaap_OtherAssetsNoncurrent.y - tmp$us.gaap_OtherAssetsNoncurrent.x)^2
+tmp$diff18 <- (tmp$us.gaap_ShareBasedCompensation.y - tmp$us.gaap_ShareBasedCompensation.x)^2
+tmp$diff19 <- (tmp$us.gaap_CurrentFederalTaxExpenseBenefit.y - tmp$us.gaap_CurrentFederalTaxExpenseBenefit.x)^2
+
+tmp$diff1 <- ifelse(is.na(tmp$diff1), 0, tmp$diff1)
+sum(!is.na(tmp$diff1))
+sum(tmp$diff1 == 0, na.rm = TRUE)/sum(!is.na(tmp$diff1))
+sum(tmp$diff1 != 0, na.rm = TRUE)/sum(!is.na(tmp$diff1))
+mean(sqrt(tmp$diff1), na.rm = TRUE)
+sqrt(mean(sqrt(tmp$diff1), na.rm = TRUE)/mean(tmp$diff1))*100
+
+tmp$diff2 <- ifelse(is.na(tmp$diff2), 0, tmp$diff2)
+sum(!is.na(tmp$diff2))
+sum(tmp$diff2 == 0, na.rm = TRUE)/sum(!is.na(tmp$diff2))
+sum(tmp$diff2 != 0, na.rm = TRUE)/sum(!is.na(tmp$diff2))
+mean(sqrt(tmp$diff2), na.rm = TRUE)
+sqrt(mean(sqrt(tmp$diff2), na.rm = TRUE)/mean(tmp$diff2))*100
+
+tmp$diff3 <- ifelse(is.na(tmp$diff3), 0, tmp$diff3)
+sum(!is.na(tmp$diff3))
+sum(tmp$diff3 == 0, na.rm = TRUE)/sum(!is.na(tmp$diff3))
+sum(tmp$diff3 != 0, na.rm = TRUE)/sum(!is.na(tmp$diff3))
+mean(sqrt(tmp$diff3), na.rm = TRUE)
+sqrt(mean(sqrt(tmp$diff3), na.rm = TRUE)/mean(tmp$diff3))*100
+
+tmp$diff4 <- ifelse(is.na(tmp$diff4), 0, tmp$diff4)
+sum(!is.na(tmp$diff4))
+sum(tmp$diff4 == 0, na.rm = TRUE)/sum(!is.na(tmp$diff4))
+sum(tmp$diff4 != 0, na.rm = TRUE)/sum(!is.na(tmp$diff4))
+mean(sqrt(tmp$diff4), na.rm = TRUE)
+sqrt(mean(sqrt(tmp$diff4), na.rm = TRUE)/mean(tmp$diff4))*100
+
+tmp$diff5 <- ifelse(is.na(tmp$diff5), 0, tmp$diff5)
+sum(!is.na(tmp$diff5))
+sum(tmp$diff5 == 0, na.rm = TRUE)/sum(!is.na(tmp$diff5))
+sum(tmp$diff5 != 0, na.rm = TRUE)/sum(!is.na(tmp$diff5))
+mean(sqrt(tmp$diff5), na.rm = TRUE)
+sqrt(mean(sqrt(tmp$diff5), na.rm = TRUE)/mean(tmp$diff5))*100
+
+tmp$diff6 <- ifelse(is.na(tmp$diff6), 0, tmp$diff6)
+sum(!is.na(tmp$diff6))
+sum(tmp$diff6 == 0, na.rm = TRUE)/sum(!is.na(tmp$diff6))
+sum(tmp$diff6 != 0, na.rm = TRUE)/sum(!is.na(tmp$diff6))
+mean(sqrt(tmp$diff6), na.rm = TRUE)
+sqrt(mean(sqrt(tmp$diff6), na.rm = TRUE)/mean(tmp$diff6))*100
+
+tmp$diff7 <- ifelse(is.na(tmp$diff7), 0, tmp$diff7)
+sum(!is.na(tmp$diff7))
+sum(tmp$diff7 == 0, na.rm = TRUE)/sum(!is.na(tmp$diff7))
+sum(tmp$diff7 != 0, na.rm = TRUE)/sum(!is.na(tmp$diff7))
+mean(sqrt(tmp$diff7), na.rm = TRUE)
+sqrt(mean(sqrt(tmp$diff7), na.rm = TRUE)/mean(tmp$diff7))*100
+
+tmp$diff8 <- ifelse(is.na(tmp$diff8), 0, tmp$diff8)
+sum(!is.na(tmp$diff8))
+sum(tmp$diff8 == 0, na.rm = TRUE)/sum(!is.na(tmp$diff8))
+sum(tmp$diff8 != 0, na.rm = TRUE)/sum(!is.na(tmp$diff8))
+mean(sqrt(tmp$diff8), na.rm = TRUE)
+sqrt(mean(sqrt(tmp$diff8), na.rm = TRUE)/mean(tmp$diff8))*100
+
+tmp$diff9 <- ifelse(is.na(tmp$diff9), 0, tmp$diff9)
+sum(!is.na(tmp$diff9))
+sum(tmp$diff9 == 0, na.rm = TRUE)/sum(!is.na(tmp$diff9))
+sum(tmp$diff9 != 0, na.rm = TRUE)/sum(!is.na(tmp$diff9))
+mean(sqrt(tmp$diff9), na.rm = TRUE)
+sqrt(mean(sqrt(tmp$diff9), na.rm = TRUE)/mean(tmp$diff9))*100
+
+tmp$diff10 <- ifelse(is.na(tmp$diff10), 0, tmp$diff10)
+sum(!is.na(tmp$diff10))
+sum(tmp$diff10 == 0, na.rm = TRUE)/sum(!is.na(tmp$diff10))
+sum(tmp$diff10 != 0, na.rm = TRUE)/sum(!is.na(tmp$diff10))
+mean(sqrt(tmp$diff10), na.rm = TRUE)
+sqrt(mean(sqrt(tmp$diff10), na.rm = TRUE)/mean(tmp$diff10))*100
+
+tmp$diff11 <- ifelse(is.na(tmp$diff11), 0, tmp$diff11)
+sum(!is.na(tmp$diff11))
+sum(tmp$diff11 == 0, na.rm = TRUE)/sum(!is.na(tmp$diff11))
+sum(tmp$diff1 != 0, na.rm = TRUE)/sum(!is.na(tmp$diff11))
+mean(sqrt(tmp$diff11), na.rm = TRUE)
+sqrt(mean(sqrt(tmp$diff11), na.rm = TRUE)/mean(tmp$diff11))*100
+
+tmp$diff12 <- ifelse(is.na(tmp$diff12), 0, tmp$diff12)
+sum(!is.na(tmp$diff12))
+sum(tmp$diff12 == 0, na.rm = TRUE)/sum(!is.na(tmp$diff12))
+sum(tmp$diff12 != 0, na.rm = TRUE)/sum(!is.na(tmp$diff12))
+mean(sqrt(tmp$diff12), na.rm = TRUE)
+sqrt(mean(sqrt(tmp$diff12), na.rm = TRUE)/mean(tmp$diff12))*100
+
+tmp$diff13 <- ifelse(is.na(tmp$diff13), 0, tmp$diff13)
+sum(!is.na(tmp$diff13))
+sum(tmp$diff13 == 0, na.rm = TRUE)/sum(!is.na(tmp$diff13))
+sum(tmp$diff13 != 0, na.rm = TRUE)/sum(!is.na(tmp$diff13))
+mean(sqrt(tmp$diff13), na.rm = TRUE)
+sqrt(mean(sqrt(tmp$diff13), na.rm = TRUE)/mean(tmp$diff13))*100
+
+tmp$diff14 <- ifelse(is.na(tmp$diff14), 0, tmp$diff14)
+sum(!is.na(tmp$diff14))
+sum(tmp$diff14 == 0, na.rm = TRUE)/sum(!is.na(tmp$diff14))
+sum(tmp$diff14 != 0, na.rm = TRUE)/sum(!is.na(tmp$diff14))
+mean(sqrt(tmp$diff14), na.rm = TRUE)
+sqrt(mean(sqrt(tmp$diff14), na.rm = TRUE)/mean(tmp$diff14))*100
+
+tmp$diff15 <- ifelse(is.na(tmp$diff15), 0, tmp$diff15)
+sum(!is.na(tmp$diff15))
+sum(tmp$diff15 == 0, na.rm = TRUE)/sum(!is.na(tmp$diff15))
+sum(tmp$diff15 != 0, na.rm = TRUE)/sum(!is.na(tmp$diff15))
+mean(sqrt(tmp$diff15), na.rm = TRUE)
+sqrt(mean(sqrt(tmp$diff15), na.rm = TRUE)/mean(tmp$diff15))*100
+
+tmp$diff16 <- ifelse(is.na(tmp$diff16), 0, tmp$diff16)
+sum(!is.na(tmp$diff16))
+sum(tmp$diff16 == 0, na.rm = TRUE)/sum(!is.na(tmp$diff16))
+sum(tmp$diff16 != 0, na.rm = TRUE)/sum(!is.na(tmp$diff16))
+mean(sqrt(tmp$diff16), na.rm = TRUE)
+sqrt(mean(sqrt(tmp$diff16), na.rm = TRUE)/mean(tmp$diff16))*100
+
+tmp$diff17 <- ifelse(is.na(tmp$diff17), 0, tmp$diff17)
+sum(!is.na(tmp$diff13))
+sum(tmp$diff17 == 0, na.rm = TRUE)/sum(!is.na(tmp$diff17))
+sum(tmp$diff17 != 0, na.rm = TRUE)/sum(!is.na(tmp$diff17))
+mean(sqrt(tmp$diff17), na.rm = TRUE)
+sqrt(mean(sqrt(tmp$diff17), na.rm = TRUE)/mean(tmp$diff17))*100
+
+tmp$diff18 <- ifelse(is.na(tmp$diff18), 0, tmp$diff18)
+sum(!is.na(tmp$diff18))
+sum(tmp$diff18 == 0, na.rm = TRUE)/sum(!is.na(tmp$diff18))
+sum(tmp$diff18 != 0, na.rm = TRUE)/sum(!is.na(tmp$diff18))
+mean(sqrt(tmp$diff18), na.rm = TRUE)
+sqrt(mean(sqrt(tmp$diff18), na.rm = TRUE)/mean(tmp$diff18))*100
+
+tmp$diff19 <- ifelse(is.na(tmp$diff19), 0, tmp$diff19)
+sum(!is.na(tmp$diff19))
+sum(tmp$diff19 == 0, na.rm = TRUE)/sum(!is.na(tmp$diff19))
+sum(tmp$diff19 != 0, na.rm = TRUE)/sum(!is.na(tmp$diff19))
+mean(sqrt(tmp$diff19), na.rm = TRUE)
+sqrt(mean(sqrt(tmp$diff19), na.rm = TRUE)/mean(tmp$diff19))*100
+
+tmp$diff20 <- ifelse(is.na(tmp$diff20), 0, tmp$diff20)
+sum(!is.na(tmp$diff13))
+sum(tmp$diff20 == 0, na.rm = TRUE)/sum(!is.na(tmp$diff20))
+sum(tmp$diff20 != 0, na.rm = TRUE)/sum(!is.na(tmp$diff20))
+mean(sqrt(tmp$diff20), na.rm = TRUE)
+sqrt(mean(sqrt(tmp$diff20), na.rm = TRUE)/mean(tmp$diff20))*100
+```
+
+
+```{r}
+Visual <- data.frame(Year = as.character(),
+                     Variable = as.character(),
+                     AverageDev = as.numeric(),
+                     RMSE = as.numeric())
+
+## 2012
+i=1
+j=2012
+tmp2 <- tmp[tmp$Year == 2012,]
+Visual[i,1] <- as.character(j)
+Visual[i,2] <- "AccountsPayableCurrent"
+Visual[i,3] <- mean(sqrt(tmp2$diff1), na.rm = TRUE)
+Visual[i,4] <- sqrt(mean(sqrt(tmp2$diff1), na.rm = TRUE))
+i=i+1
+Visual[i,1] <- as.character(j)
+Visual[i,2] <- "AccountsReceivableNetCurrent"
+Visual[i,3] <- mean(sqrt(tmp2$diff2), na.rm = TRUE)
+Visual[i,4] <- sqrt(mean(sqrt(tmp2$diff2), na.rm = TRUE))
+i=i+1
+Visual[i,1] <- as.character(j)
+Visual[i,2] <- "AccumulatedDepreciationDepletionAndAmortizationPropertyPlantAndEquipment"
+Visual[i,3] <- mean(sqrt(tmp2$diff3), na.rm = TRUE)
+Visual[i,4] <- sqrt(mean(sqrt(tmp2$diff3), na.rm = TRUE))
+i=i+1
+Visual[i,1] <- as.character(j)
+Visual[i,2] <- "AccumulatedOtherComprehensiveIncomeLossNetOfTax"
+Visual[i,3] <- mean(sqrt(tmp2$diff4), na.rm = TRUE)
+Visual[i,4] <- sqrt(mean(sqrt(tmp2$diff4), na.rm = TRUE))
+i=i+1
+Visual[i,1] <- as.character(j)
+Visual[i,2] <- "Assets"
+Visual[i,3] <- mean(sqrt(tmp2$diff5), na.rm = TRUE)
+Visual[i,4] <- sqrt(mean(sqrt(tmp2$diff5), na.rm = TRUE))
+i=i+1
+Visual[i,1] <- as.character(j)
+Visual[i,2] <- "AssetsCurrent"
+Visual[i,3] <- mean(sqrt(tmp2$diff6), na.rm = TRUE)
+Visual[i,4] <- sqrt(mean(sqrt(tmp2$diff6), na.rm = TRUE))
+i=i+1
+Visual[i,1] <- as.character(j)
+Visual[i,2] <- "CashAndCashEquivalentsAtCarryingValue"
+Visual[i,3] <- mean(sqrt(tmp2$diff7), na.rm = TRUE)
+Visual[i,4] <- sqrt(mean(sqrt(tmp2$diff7), na.rm = TRUE))
+i=i+1
+Visual[i,1] <- as.character(j)
+Visual[i,2] <- "CommonStockValue"
+Visual[i,3] <- mean(sqrt(tmp2$diff8), na.rm = TRUE)
+Visual[i,4] <- sqrt(mean(sqrt(tmp2$diff8), na.rm = TRUE))
+i=i+1
+Visual[i,1] <- as.character(j)
+Visual[i,2] <- "Goodwill"
+Visual[i,3] <- mean(sqrt(tmp2$diff9), na.rm = TRUE)
+Visual[i,4] <- sqrt(mean(sqrt(tmp2$diff9), na.rm = TRUE))
+i=i+1
+Visual[i,1] <- as.character(j)
+Visual[i,2] <- "LiabilitiesCurrent"
+Visual[i,3] <- mean(sqrt(tmp2$diff10), na.rm = TRUE)
+Visual[i,4] <- sqrt(mean(sqrt(tmp2$diff10), na.rm = TRUE))
+i=i+1
+Visual[i,1] <- as.character(j)
+Visual[i,2] <- "PropertyPlantAndEquipmentGross"
+Visual[i,3] <- mean(sqrt(tmp2$diff11), na.rm = TRUE)
+Visual[i,4] <- sqrt(mean(sqrt(tmp2$diff11), na.rm = TRUE))
+i=i+1
+Visual[i,1] <- as.character(j)
+Visual[i,2] <- "StockholdersEquity"
+Visual[i,3] <- mean(sqrt(tmp2$diff12), na.rm = TRUE)
+Visual[i,4] <- sqrt(mean(sqrt(tmp2$diff12), na.rm = TRUE))
+i=i+1
+Visual[i,1] <- as.character(j)
+Visual[i,2] <- "NetIncomeLoss"
+Visual[i,3] <- mean(sqrt(tmp2$diff13), na.rm = TRUE)
+Visual[i,4] <- sqrt(mean(sqrt(tmp2$diff13), na.rm = TRUE))
+i=i+1
+Visual[i,1] <- as.character(j)
+Visual[i,2] <- "Liabilities"
+Visual[i,3] <- mean(sqrt(tmp2$diff14), na.rm = TRUE)
+Visual[i,4] <- sqrt(mean(sqrt(tmp2$diff14), na.rm = TRUE))
+i=i+1
+Visual[i,1] <- as.character(j)
+Visual[i,2] <- "OtherAssetsNoncurrent"
+Visual[i,3] <- mean(sqrt(tmp2$diff15), na.rm = TRUE)
+Visual[i,4] <- sqrt(mean(sqrt(tmp2$diff15), na.rm = TRUE))
+i=i+1
+Visual[i,1] <- as.character(j)
+Visual[i,2] <- "ShareBasedCompensation"
+Visual[i,3] <- mean(sqrt(tmp2$diff16), na.rm = TRUE)
+Visual[i,4] <- sqrt(mean(sqrt(tmp2$diff16), na.rm = TRUE))
+i=i+1
+Visual[i,1] <- as.character(j)
+Visual[i,2] <- "Depreciation"
+Visual[i,3] <- mean(sqrt(tmp2$diff16), na.rm = TRUE)
+Visual[i,4] <- sqrt(mean(sqrt(tmp2$diff16), na.rm = TRUE))
+i=i+1
+Visual[i,1] <- as.character(j)
+Visual[i,2] <- "OperatingIncomeLoss"
+Visual[i,3] <- mean(sqrt(tmp2$diff18), na.rm = TRUE)
+Visual[i,4] <- sqrt(mean(sqrt(tmp2$diff18), na.rm = TRUE))
+i=i+1
+Visual[i,1] <- as.character(j)
+Visual[i,2] <- "CurrentFederalTaxExpenseBenefit"
+Visual[i,3] <- mean(sqrt(tmp2$diff19), na.rm = TRUE)
+Visual[i,4] <- sqrt(mean(sqrt(tmp2$diff19), na.rm = TRUE))
+i=i+1
+j=j+1
+
+tmp2 <- tmp[tmp$Year == 2013,]
+Visual[i,1] <- as.character(j)
+Visual[i,2] <- "AccountsPayableCurrent"
+Visual[i,3] <- mean(sqrt(tmp2$diff1), na.rm = TRUE)
+Visual[i,4] <- sqrt(mean(sqrt(tmp2$diff1), na.rm = TRUE))
+i=i+1
+Visual[i,1] <- as.character(j)
+Visual[i,2] <- "AccountsReceivableNetCurrent"
+Visual[i,3] <- mean(sqrt(tmp2$diff2), na.rm = TRUE)
+Visual[i,4] <- sqrt(mean(sqrt(tmp2$diff2), na.rm = TRUE))
+i=i+1
+Visual[i,1] <- as.character(j)
+Visual[i,2] <- "AccumulatedDepreciationDepletionAndAmortizationPropertyPlantAndEquipment"
+Visual[i,3] <- mean(sqrt(tmp2$diff3), na.rm = TRUE)
+Visual[i,4] <- sqrt(mean(sqrt(tmp2$diff3), na.rm = TRUE))
+i=i+1
+Visual[i,1] <- as.character(j)
+Visual[i,2] <- "AccumulatedOtherComprehensiveIncomeLossNetOfTax"
+Visual[i,3] <- mean(sqrt(tmp2$diff4), na.rm = TRUE)
+Visual[i,4] <- sqrt(mean(sqrt(tmp2$diff4), na.rm = TRUE))
+i=i+1
+Visual[i,1] <- as.character(j)
+Visual[i,2] <- "Assets"
+Visual[i,3] <- mean(sqrt(tmp2$diff5), na.rm = TRUE)
+Visual[i,4] <- sqrt(mean(sqrt(tmp2$diff5), na.rm = TRUE))
+i=i+1
+Visual[i,1] <- as.character(j)
+Visual[i,2] <- "AssetsCurrent"
+Visual[i,3] <- mean(sqrt(tmp2$diff6), na.rm = TRUE)
+Visual[i,4] <- sqrt(mean(sqrt(tmp2$diff6), na.rm = TRUE))
+i=i+1
+Visual[i,1] <- as.character(j)
+Visual[i,2] <- "CashAndCashEquivalentsAtCarryingValue"
+Visual[i,3] <- mean(sqrt(tmp2$diff7), na.rm = TRUE)
+Visual[i,4] <- sqrt(mean(sqrt(tmp2$diff7), na.rm = TRUE))
+i=i+1
+Visual[i,1] <- as.character(j)
+Visual[i,2] <- "CommonStockValue"
+Visual[i,3] <- mean(sqrt(tmp2$diff8), na.rm = TRUE)
+Visual[i,4] <- sqrt(mean(sqrt(tmp2$diff8), na.rm = TRUE))
+i=i+1
+Visual[i,1] <- as.character(j)
+Visual[i,2] <- "Goodwill"
+Visual[i,3] <- mean(sqrt(tmp2$diff9), na.rm = TRUE)
+Visual[i,4] <- sqrt(mean(sqrt(tmp2$diff9), na.rm = TRUE))
+i=i+1
+Visual[i,1] <- as.character(j)
+Visual[i,2] <- "LiabilitiesCurrent"
+Visual[i,3] <- mean(sqrt(tmp2$diff10), na.rm = TRUE)
+Visual[i,4] <- sqrt(mean(sqrt(tmp2$diff10), na.rm = TRUE))
+i=i+1
+Visual[i,1] <- as.character(j)
+Visual[i,2] <- "PropertyPlantAndEquipmentGross"
+Visual[i,3] <- mean(sqrt(tmp2$diff11), na.rm = TRUE)
+Visual[i,4] <- sqrt(mean(sqrt(tmp2$diff11), na.rm = TRUE))
+i=i+1
+Visual[i,1] <- as.character(j)
+Visual[i,2] <- "StockholdersEquity"
+Visual[i,3] <- mean(sqrt(tmp2$diff12), na.rm = TRUE)
+Visual[i,4] <- sqrt(mean(sqrt(tmp2$diff12), na.rm = TRUE))
+i=i+1
+Visual[i,1] <- as.character(j)
+Visual[i,2] <- "NetIncomeLoss"
+Visual[i,3] <- mean(sqrt(tmp2$diff13), na.rm = TRUE)
+Visual[i,4] <- sqrt(mean(sqrt(tmp2$diff13), na.rm = TRUE))
+i=i+1
+Visual[i,1] <- as.character(j)
+Visual[i,2] <- "Liabilities"
+Visual[i,3] <- mean(sqrt(tmp2$diff14), na.rm = TRUE)
+Visual[i,4] <- sqrt(mean(sqrt(tmp2$diff14), na.rm = TRUE))
+i=i+1
+Visual[i,1] <- as.character(j)
+Visual[i,2] <- "OtherAssetsNoncurrent"
+Visual[i,3] <- mean(sqrt(tmp2$diff15), na.rm = TRUE)
+Visual[i,4] <- sqrt(mean(sqrt(tmp2$diff15), na.rm = TRUE))
+i=i+1
+Visual[i,1] <- as.character(j)
+Visual[i,2] <- "ShareBasedCompensation"
+Visual[i,3] <- mean(sqrt(tmp2$diff16), na.rm = TRUE)
+Visual[i,4] <- sqrt(mean(sqrt(tmp2$diff16), na.rm = TRUE))
+i=i+1
+Visual[i,1] <- as.character(j)
+Visual[i,2] <- "Depreciation"
+Visual[i,3] <- mean(sqrt(tmp2$diff16), na.rm = TRUE)
+Visual[i,4] <- sqrt(mean(sqrt(tmp2$diff16), na.rm = TRUE))
+i=i+1
+Visual[i,1] <- as.character(j)
+Visual[i,2] <- "OperatingIncomeLoss"
+Visual[i,3] <- mean(sqrt(tmp2$diff18), na.rm = TRUE)
+Visual[i,4] <- sqrt(mean(sqrt(tmp2$diff18), na.rm = TRUE))
+i=i+1
+Visual[i,1] <- as.character(j)
+Visual[i,2] <- "CurrentFederalTaxExpenseBenefit"
+Visual[i,3] <- mean(sqrt(tmp2$diff19), na.rm = TRUE)
+Visual[i,4] <- sqrt(mean(sqrt(tmp2$diff19), na.rm = TRUE))
+i=i+1
+j=j+1
+
+tmp2 <- tmp[tmp$Year == 2014,]
+Visual[i,1] <- as.character(j)
+Visual[i,2] <- "AccountsPayableCurrent"
+Visual[i,3] <- mean(sqrt(tmp2$diff1), na.rm = TRUE)
+Visual[i,4] <- sqrt(mean(sqrt(tmp2$diff1), na.rm = TRUE))
+i=i+1
+Visual[i,1] <- as.character(j)
+Visual[i,2] <- "AccountsReceivableNetCurrent"
+Visual[i,3] <- mean(sqrt(tmp2$diff2), na.rm = TRUE)
+Visual[i,4] <- sqrt(mean(sqrt(tmp2$diff2), na.rm = TRUE))
+i=i+1
+Visual[i,1] <- as.character(j)
+Visual[i,2] <- "AccumulatedDepreciationDepletionAndAmortizationPropertyPlantAndEquipment"
+Visual[i,3] <- mean(sqrt(tmp2$diff3), na.rm = TRUE)
+Visual[i,4] <- sqrt(mean(sqrt(tmp2$diff3), na.rm = TRUE))
+i=i+1
+Visual[i,1] <- as.character(j)
+Visual[i,2] <- "AccumulatedOtherComprehensiveIncomeLossNetOfTax"
+Visual[i,3] <- mean(sqrt(tmp2$diff4), na.rm = TRUE)
+Visual[i,4] <- sqrt(mean(sqrt(tmp2$diff4), na.rm = TRUE))
+i=i+1
+Visual[i,1] <- as.character(j)
+Visual[i,2] <- "Assets"
+Visual[i,3] <- mean(sqrt(tmp2$diff5), na.rm = TRUE)
+Visual[i,4] <- sqrt(mean(sqrt(tmp2$diff5), na.rm = TRUE))
+i=i+1
+Visual[i,1] <- as.character(j)
+Visual[i,2] <- "AssetsCurrent"
+Visual[i,3] <- mean(sqrt(tmp2$diff6), na.rm = TRUE)
+Visual[i,4] <- sqrt(mean(sqrt(tmp2$diff6), na.rm = TRUE))
+i=i+1
+Visual[i,1] <- as.character(j)
+Visual[i,2] <- "CashAndCashEquivalentsAtCarryingValue"
+Visual[i,3] <- mean(sqrt(tmp2$diff7), na.rm = TRUE)
+Visual[i,4] <- sqrt(mean(sqrt(tmp2$diff7), na.rm = TRUE))
+i=i+1
+Visual[i,1] <- as.character(j)
+Visual[i,2] <- "CommonStockValue"
+Visual[i,3] <- mean(sqrt(tmp2$diff8), na.rm = TRUE)
+Visual[i,4] <- sqrt(mean(sqrt(tmp2$diff8), na.rm = TRUE))
+i=i+1
+Visual[i,1] <- as.character(j)
+Visual[i,2] <- "Goodwill"
+Visual[i,3] <- mean(sqrt(tmp2$diff9), na.rm = TRUE)
+Visual[i,4] <- sqrt(mean(sqrt(tmp2$diff9), na.rm = TRUE))
+i=i+1
+Visual[i,1] <- as.character(j)
+Visual[i,2] <- "LiabilitiesCurrent"
+Visual[i,3] <- mean(sqrt(tmp2$diff10), na.rm = TRUE)
+Visual[i,4] <- sqrt(mean(sqrt(tmp2$diff10), na.rm = TRUE))
+i=i+1
+Visual[i,1] <- as.character(j)
+Visual[i,2] <- "PropertyPlantAndEquipmentGross"
+Visual[i,3] <- mean(sqrt(tmp2$diff11), na.rm = TRUE)
+Visual[i,4] <- sqrt(mean(sqrt(tmp2$diff11), na.rm = TRUE))
+i=i+1
+Visual[i,1] <- as.character(j)
+Visual[i,2] <- "StockholdersEquity"
+Visual[i,3] <- mean(sqrt(tmp2$diff12), na.rm = TRUE)
+Visual[i,4] <- sqrt(mean(sqrt(tmp2$diff12), na.rm = TRUE))
+i=i+1
+Visual[i,1] <- as.character(j)
+Visual[i,2] <- "NetIncomeLoss"
+Visual[i,3] <- mean(sqrt(tmp2$diff13), na.rm = TRUE)
+Visual[i,4] <- sqrt(mean(sqrt(tmp2$diff13), na.rm = TRUE))
+i=i+1
+Visual[i,1] <- as.character(j)
+Visual[i,2] <- "Liabilities"
+Visual[i,3] <- mean(sqrt(tmp2$diff14), na.rm = TRUE)
+Visual[i,4] <- sqrt(mean(sqrt(tmp2$diff14), na.rm = TRUE))
+i=i+1
+Visual[i,1] <- as.character(j)
+Visual[i,2] <- "OtherAssetsNoncurrent"
+Visual[i,3] <- mean(sqrt(tmp2$diff15), na.rm = TRUE)
+Visual[i,4] <- sqrt(mean(sqrt(tmp2$diff15), na.rm = TRUE))
+i=i+1
+Visual[i,1] <- as.character(j)
+Visual[i,2] <- "ShareBasedCompensation"
+Visual[i,3] <- mean(sqrt(tmp2$diff16), na.rm = TRUE)
+Visual[i,4] <- sqrt(mean(sqrt(tmp2$diff16), na.rm = TRUE))
+i=i+1
+Visual[i,1] <- as.character(j)
+Visual[i,2] <- "Depreciation"
+Visual[i,3] <- mean(sqrt(tmp2$diff16), na.rm = TRUE)
+Visual[i,4] <- sqrt(mean(sqrt(tmp2$diff16), na.rm = TRUE))
+i=i+1
+Visual[i,1] <- as.character(j)
+Visual[i,2] <- "OperatingIncomeLoss"
+Visual[i,3] <- mean(sqrt(tmp2$diff18), na.rm = TRUE)
+Visual[i,4] <- sqrt(mean(sqrt(tmp2$diff18), na.rm = TRUE))
+i=i+1
+Visual[i,1] <- as.character(j)
+Visual[i,2] <- "CurrentFederalTaxExpenseBenefit"
+Visual[i,3] <- mean(sqrt(tmp2$diff19), na.rm = TRUE)
+Visual[i,4] <- sqrt(mean(sqrt(tmp2$diff19), na.rm = TRUE))
+i=i+1
+j=j+1
+
+tmp2 <- tmp[tmp$Year == 2015,]
+Visual[i,1] <- as.character(j)
+Visual[i,2] <- "AccountsPayableCurrent"
+Visual[i,3] <- mean(sqrt(tmp2$diff1), na.rm = TRUE)
+Visual[i,4] <- sqrt(mean(sqrt(tmp2$diff1), na.rm = TRUE))
+i=i+1
+Visual[i,1] <- as.character(j)
+Visual[i,2] <- "AccountsReceivableNetCurrent"
+Visual[i,3] <- mean(sqrt(tmp2$diff2), na.rm = TRUE)
+Visual[i,4] <- sqrt(mean(sqrt(tmp2$diff2), na.rm = TRUE))
+i=i+1
+Visual[i,1] <- as.character(j)
+Visual[i,2] <- "AccumulatedDepreciationDepletionAndAmortizationPropertyPlantAndEquipment"
+Visual[i,3] <- mean(sqrt(tmp2$diff3), na.rm = TRUE)
+Visual[i,4] <- sqrt(mean(sqrt(tmp2$diff3), na.rm = TRUE))
+i=i+1
+Visual[i,1] <- as.character(j)
+Visual[i,2] <- "AccumulatedOtherComprehensiveIncomeLossNetOfTax"
+Visual[i,3] <- mean(sqrt(tmp2$diff4), na.rm = TRUE)
+Visual[i,4] <- sqrt(mean(sqrt(tmp2$diff4), na.rm = TRUE))
+i=i+1
+Visual[i,1] <- as.character(j)
+Visual[i,2] <- "Assets"
+Visual[i,3] <- mean(sqrt(tmp2$diff5), na.rm = TRUE)
+Visual[i,4] <- sqrt(mean(sqrt(tmp2$diff5), na.rm = TRUE))
+i=i+1
+Visual[i,1] <- as.character(j)
+Visual[i,2] <- "AssetsCurrent"
+Visual[i,3] <- mean(sqrt(tmp2$diff6), na.rm = TRUE)
+Visual[i,4] <- sqrt(mean(sqrt(tmp2$diff6), na.rm = TRUE))
+i=i+1
+Visual[i,1] <- as.character(j)
+Visual[i,2] <- "CashAndCashEquivalentsAtCarryingValue"
+Visual[i,3] <- mean(sqrt(tmp2$diff7), na.rm = TRUE)
+Visual[i,4] <- sqrt(mean(sqrt(tmp2$diff7), na.rm = TRUE))
+i=i+1
+Visual[i,1] <- as.character(j)
+Visual[i,2] <- "CommonStockValue"
+Visual[i,3] <- mean(sqrt(tmp2$diff8), na.rm = TRUE)
+Visual[i,4] <- sqrt(mean(sqrt(tmp2$diff8), na.rm = TRUE))
+i=i+1
+Visual[i,1] <- as.character(j)
+Visual[i,2] <- "Goodwill"
+Visual[i,3] <- mean(sqrt(tmp2$diff9), na.rm = TRUE)
+Visual[i,4] <- sqrt(mean(sqrt(tmp2$diff9), na.rm = TRUE))
+i=i+1
+Visual[i,1] <- as.character(j)
+Visual[i,2] <- "LiabilitiesCurrent"
+Visual[i,3] <- mean(sqrt(tmp2$diff10), na.rm = TRUE)
+Visual[i,4] <- sqrt(mean(sqrt(tmp2$diff10), na.rm = TRUE))
+i=i+1
+Visual[i,1] <- as.character(j)
+Visual[i,2] <- "PropertyPlantAndEquipmentGross"
+Visual[i,3] <- mean(sqrt(tmp2$diff11), na.rm = TRUE)
+Visual[i,4] <- sqrt(mean(sqrt(tmp2$diff11), na.rm = TRUE))
+i=i+1
+Visual[i,1] <- as.character(j)
+Visual[i,2] <- "StockholdersEquity"
+Visual[i,3] <- mean(sqrt(tmp2$diff12), na.rm = TRUE)
+Visual[i,4] <- sqrt(mean(sqrt(tmp2$diff12), na.rm = TRUE))
+i=i+1
+Visual[i,1] <- as.character(j)
+Visual[i,2] <- "NetIncomeLoss"
+Visual[i,3] <- mean(sqrt(tmp2$diff13), na.rm = TRUE)
+Visual[i,4] <- sqrt(mean(sqrt(tmp2$diff13), na.rm = TRUE))
+i=i+1
+Visual[i,1] <- as.character(j)
+Visual[i,2] <- "Liabilities"
+Visual[i,3] <- mean(sqrt(tmp2$diff14), na.rm = TRUE)
+Visual[i,4] <- sqrt(mean(sqrt(tmp2$diff14), na.rm = TRUE))
+i=i+1
+Visual[i,1] <- as.character(j)
+Visual[i,2] <- "OtherAssetsNoncurrent"
+Visual[i,3] <- mean(sqrt(tmp2$diff15), na.rm = TRUE)
+Visual[i,4] <- sqrt(mean(sqrt(tmp2$diff15), na.rm = TRUE))
+i=i+1
+Visual[i,1] <- as.character(j)
+Visual[i,2] <- "ShareBasedCompensation"
+Visual[i,3] <- mean(sqrt(tmp2$diff16), na.rm = TRUE)
+Visual[i,4] <- sqrt(mean(sqrt(tmp2$diff16), na.rm = TRUE))
+i=i+1
+Visual[i,1] <- as.character(j)
+Visual[i,2] <- "Depreciation"
+Visual[i,3] <- mean(sqrt(tmp2$diff16), na.rm = TRUE)
+Visual[i,4] <- sqrt(mean(sqrt(tmp2$diff16), na.rm = TRUE))
+i=i+1
+Visual[i,1] <- as.character(j)
+Visual[i,2] <- "OperatingIncomeLoss"
+Visual[i,3] <- mean(sqrt(tmp2$diff18), na.rm = TRUE)
+Visual[i,4] <- sqrt(mean(sqrt(tmp2$diff18), na.rm = TRUE))
+i=i+1
+Visual[i,1] <- as.character(j)
+Visual[i,2] <- "CurrentFederalTaxExpenseBenefit"
+Visual[i,3] <- mean(sqrt(tmp2$diff19), na.rm = TRUE)
+Visual[i,4] <- sqrt(mean(sqrt(tmp2$diff19), na.rm = TRUE))
+i=i+1
+j=j+1
+
+tmp2 <- tmp[tmp$Year == 2016,]
+Visual[i,1] <- as.character(j)
+Visual[i,2] <- "AccountsPayableCurrent"
+Visual[i,3] <- mean(sqrt(tmp2$diff1), na.rm = TRUE)
+Visual[i,4] <- sqrt(mean(sqrt(tmp2$diff1), na.rm = TRUE))
+i=i+1
+Visual[i,1] <- as.character(j)
+Visual[i,2] <- "AccountsReceivableNetCurrent"
+Visual[i,3] <- mean(sqrt(tmp2$diff2), na.rm = TRUE)
+Visual[i,4] <- sqrt(mean(sqrt(tmp2$diff2), na.rm = TRUE))
+i=i+1
+Visual[i,1] <- as.character(j)
+Visual[i,2] <- "AccumulatedDepreciationDepletionAndAmortizationPropertyPlantAndEquipment"
+Visual[i,3] <- mean(sqrt(tmp2$diff3), na.rm = TRUE)
+Visual[i,4] <- sqrt(mean(sqrt(tmp2$diff3), na.rm = TRUE))
+i=i+1
+Visual[i,1] <- as.character(j)
+Visual[i,2] <- "AccumulatedOtherComprehensiveIncomeLossNetOfTax"
+Visual[i,3] <- mean(sqrt(tmp2$diff4), na.rm = TRUE)
+Visual[i,4] <- sqrt(mean(sqrt(tmp2$diff4), na.rm = TRUE))
+i=i+1
+Visual[i,1] <- as.character(j)
+Visual[i,2] <- "Assets"
+Visual[i,3] <- mean(sqrt(tmp2$diff5), na.rm = TRUE)
+Visual[i,4] <- sqrt(mean(sqrt(tmp2$diff5), na.rm = TRUE))
+i=i+1
+Visual[i,1] <- as.character(j)
+Visual[i,2] <- "AssetsCurrent"
+Visual[i,3] <- mean(sqrt(tmp2$diff6), na.rm = TRUE)
+Visual[i,4] <- sqrt(mean(sqrt(tmp2$diff6), na.rm = TRUE))
+i=i+1
+Visual[i,1] <- as.character(j)
+Visual[i,2] <- "CashAndCashEquivalentsAtCarryingValue"
+Visual[i,3] <- mean(sqrt(tmp2$diff7), na.rm = TRUE)
+Visual[i,4] <- sqrt(mean(sqrt(tmp2$diff7), na.rm = TRUE))
+i=i+1
+Visual[i,1] <- as.character(j)
+Visual[i,2] <- "CommonStockValue"
+Visual[i,3] <- mean(sqrt(tmp2$diff8), na.rm = TRUE)
+Visual[i,4] <- sqrt(mean(sqrt(tmp2$diff8), na.rm = TRUE))
+i=i+1
+Visual[i,1] <- as.character(j)
+Visual[i,2] <- "Goodwill"
+Visual[i,3] <- mean(sqrt(tmp2$diff9), na.rm = TRUE)
+Visual[i,4] <- sqrt(mean(sqrt(tmp2$diff9), na.rm = TRUE))
+i=i+1
+Visual[i,1] <- as.character(j)
+Visual[i,2] <- "LiabilitiesCurrent"
+Visual[i,3] <- mean(sqrt(tmp2$diff10), na.rm = TRUE)
+Visual[i,4] <- sqrt(mean(sqrt(tmp2$diff10), na.rm = TRUE))
+i=i+1
+Visual[i,1] <- as.character(j)
+Visual[i,2] <- "PropertyPlantAndEquipmentGross"
+Visual[i,3] <- mean(sqrt(tmp2$diff11), na.rm = TRUE)
+Visual[i,4] <- sqrt(mean(sqrt(tmp2$diff11), na.rm = TRUE))
+i=i+1
+Visual[i,1] <- as.character(j)
+Visual[i,2] <- "StockholdersEquity"
+Visual[i,3] <- mean(sqrt(tmp2$diff12), na.rm = TRUE)
+Visual[i,4] <- sqrt(mean(sqrt(tmp2$diff12), na.rm = TRUE))
+i=i+1
+Visual[i,1] <- as.character(j)
+Visual[i,2] <- "NetIncomeLoss"
+Visual[i,3] <- mean(sqrt(tmp2$diff13), na.rm = TRUE)
+Visual[i,4] <- sqrt(mean(sqrt(tmp2$diff13), na.rm = TRUE))
+i=i+1
+Visual[i,1] <- as.character(j)
+Visual[i,2] <- "Liabilities"
+Visual[i,3] <- mean(sqrt(tmp2$diff14), na.rm = TRUE)
+Visual[i,4] <- sqrt(mean(sqrt(tmp2$diff14), na.rm = TRUE))
+i=i+1
+Visual[i,1] <- as.character(j)
+Visual[i,2] <- "OtherAssetsNoncurrent"
+Visual[i,3] <- mean(sqrt(tmp2$diff15), na.rm = TRUE)
+Visual[i,4] <- sqrt(mean(sqrt(tmp2$diff15), na.rm = TRUE))
+i=i+1
+Visual[i,1] <- as.character(j)
+Visual[i,2] <- "ShareBasedCompensation"
+Visual[i,3] <- mean(sqrt(tmp2$diff16), na.rm = TRUE)
+Visual[i,4] <- sqrt(mean(sqrt(tmp2$diff16), na.rm = TRUE))
+i=i+1
+Visual[i,1] <- as.character(j)
+Visual[i,2] <- "Depreciation"
+Visual[i,3] <- mean(sqrt(tmp2$diff16), na.rm = TRUE)
+Visual[i,4] <- sqrt(mean(sqrt(tmp2$diff16), na.rm = TRUE))
+i=i+1
+Visual[i,1] <- as.character(j)
+Visual[i,2] <- "OperatingIncomeLoss"
+Visual[i,3] <- mean(sqrt(tmp2$diff18), na.rm = TRUE)
+Visual[i,4] <- sqrt(mean(sqrt(tmp2$diff18), na.rm = TRUE))
+i=i+1
+Visual[i,1] <- as.character(j)
+Visual[i,2] <- "CurrentFederalTaxExpenseBenefit"
+Visual[i,3] <- mean(sqrt(tmp2$diff19), na.rm = TRUE)
+Visual[i,4] <- sqrt(mean(sqrt(tmp2$diff19), na.rm = TRUE))
+i=i+1
+j=j+1
+
+tmp2 <- tmp[tmp$Year == 2017,]
+Visual[i,1] <- as.character(j)
+Visual[i,2] <- "AccountsPayableCurrent"
+Visual[i,3] <- mean(sqrt(tmp2$diff1), na.rm = TRUE)
+Visual[i,4] <- sqrt(mean(sqrt(tmp2$diff1), na.rm = TRUE))
+i=i+1
+Visual[i,1] <- as.character(j)
+Visual[i,2] <- "AccountsReceivableNetCurrent"
+Visual[i,3] <- mean(sqrt(tmp2$diff2), na.rm = TRUE)
+Visual[i,4] <- sqrt(mean(sqrt(tmp2$diff2), na.rm = TRUE))
+i=i+1
+Visual[i,1] <- as.character(j)
+Visual[i,2] <- "AccumulatedDepreciationDepletionAndAmortizationPropertyPlantAndEquipment"
+Visual[i,3] <- mean(sqrt(tmp2$diff3), na.rm = TRUE)
+Visual[i,4] <- sqrt(mean(sqrt(tmp2$diff3), na.rm = TRUE))
+i=i+1
+Visual[i,1] <- as.character(j)
+Visual[i,2] <- "AccumulatedOtherComprehensiveIncomeLossNetOfTax"
+Visual[i,3] <- mean(sqrt(tmp2$diff4), na.rm = TRUE)
+Visual[i,4] <- sqrt(mean(sqrt(tmp2$diff4), na.rm = TRUE))
+i=i+1
+Visual[i,1] <- as.character(j)
+Visual[i,2] <- "Assets"
+Visual[i,3] <- mean(sqrt(tmp2$diff5), na.rm = TRUE)
+Visual[i,4] <- sqrt(mean(sqrt(tmp2$diff5), na.rm = TRUE))
+i=i+1
+Visual[i,1] <- as.character(j)
+Visual[i,2] <- "AssetsCurrent"
+Visual[i,3] <- mean(sqrt(tmp2$diff6), na.rm = TRUE)
+Visual[i,4] <- sqrt(mean(sqrt(tmp2$diff6), na.rm = TRUE))
+i=i+1
+Visual[i,1] <- as.character(j)
+Visual[i,2] <- "CashAndCashEquivalentsAtCarryingValue"
+Visual[i,3] <- mean(sqrt(tmp2$diff7), na.rm = TRUE)
+Visual[i,4] <- sqrt(mean(sqrt(tmp2$diff7), na.rm = TRUE))
+i=i+1
+Visual[i,1] <- as.character(j)
+Visual[i,2] <- "CommonStockValue"
+Visual[i,3] <- mean(sqrt(tmp2$diff8), na.rm = TRUE)
+Visual[i,4] <- sqrt(mean(sqrt(tmp2$diff8), na.rm = TRUE))
+i=i+1
+Visual[i,1] <- as.character(j)
+Visual[i,2] <- "Goodwill"
+Visual[i,3] <- mean(sqrt(tmp2$diff9), na.rm = TRUE)
+Visual[i,4] <- sqrt(mean(sqrt(tmp2$diff9), na.rm = TRUE))
+i=i+1
+Visual[i,1] <- as.character(j)
+Visual[i,2] <- "LiabilitiesCurrent"
+Visual[i,3] <- mean(sqrt(tmp2$diff10), na.rm = TRUE)
+Visual[i,4] <- sqrt(mean(sqrt(tmp2$diff10), na.rm = TRUE))
+i=i+1
+Visual[i,1] <- as.character(j)
+Visual[i,2] <- "PropertyPlantAndEquipmentGross"
+Visual[i,3] <- mean(sqrt(tmp2$diff11), na.rm = TRUE)
+Visual[i,4] <- sqrt(mean(sqrt(tmp2$diff11), na.rm = TRUE))
+i=i+1
+Visual[i,1] <- as.character(j)
+Visual[i,2] <- "StockholdersEquity"
+Visual[i,3] <- mean(sqrt(tmp2$diff12), na.rm = TRUE)
+Visual[i,4] <- sqrt(mean(sqrt(tmp2$diff12), na.rm = TRUE))
+i=i+1
+Visual[i,1] <- as.character(j)
+Visual[i,2] <- "NetIncomeLoss"
+Visual[i,3] <- mean(sqrt(tmp2$diff13), na.rm = TRUE)
+Visual[i,4] <- sqrt(mean(sqrt(tmp2$diff13), na.rm = TRUE))
+i=i+1
+Visual[i,1] <- as.character(j)
+Visual[i,2] <- "Liabilities"
+Visual[i,3] <- mean(sqrt(tmp2$diff14), na.rm = TRUE)
+Visual[i,4] <- sqrt(mean(sqrt(tmp2$diff14), na.rm = TRUE))
+i=i+1
+Visual[i,1] <- as.character(j)
+Visual[i,2] <- "OtherAssetsNoncurrent"
+Visual[i,3] <- mean(sqrt(tmp2$diff15), na.rm = TRUE)
+Visual[i,4] <- sqrt(mean(sqrt(tmp2$diff15), na.rm = TRUE))
+i=i+1
+Visual[i,1] <- as.character(j)
+Visual[i,2] <- "ShareBasedCompensation"
+Visual[i,3] <- mean(sqrt(tmp2$diff16), na.rm = TRUE)
+Visual[i,4] <- sqrt(mean(sqrt(tmp2$diff16), na.rm = TRUE))
+i=i+1
+Visual[i,1] <- as.character(j)
+Visual[i,2] <- "Depreciation"
+Visual[i,3] <- mean(sqrt(tmp2$diff16), na.rm = TRUE)
+Visual[i,4] <- sqrt(mean(sqrt(tmp2$diff16), na.rm = TRUE))
+i=i+1
+Visual[i,1] <- as.character(j)
+Visual[i,2] <- "OperatingIncomeLoss"
+Visual[i,3] <- mean(sqrt(tmp2$diff18), na.rm = TRUE)
+Visual[i,4] <- sqrt(mean(sqrt(tmp2$diff18), na.rm = TRUE))
+i=i+1
+Visual[i,1] <- as.character(j)
+Visual[i,2] <- "CurrentFederalTaxExpenseBenefit"
+Visual[i,3] <- mean(sqrt(tmp2$diff19), na.rm = TRUE)
+Visual[i,4] <- sqrt(mean(sqrt(tmp2$diff19), na.rm = TRUE))
+i=i+1
+j=j+1
+tmp2 <- tmp[tmp$Year == 2018,]
+Visual[i,1] <- as.character(j)
+Visual[i,2] <- "AccountsPayableCurrent"
+Visual[i,3] <- mean(sqrt(tmp2$diff1), na.rm = TRUE)
+Visual[i,4] <- sqrt(mean(sqrt(tmp2$diff1), na.rm = TRUE))
+i=i+1
+Visual[i,1] <- as.character(j)
+Visual[i,2] <- "AccountsReceivableNetCurrent"
+Visual[i,3] <- mean(sqrt(tmp2$diff2), na.rm = TRUE)
+Visual[i,4] <- sqrt(mean(sqrt(tmp2$diff2), na.rm = TRUE))
+i=i+1
+Visual[i,1] <- as.character(j)
+Visual[i,2] <- "AccumulatedDepreciationDepletionAndAmortizationPropertyPlantAndEquipment"
+Visual[i,3] <- mean(sqrt(tmp2$diff3), na.rm = TRUE)
+Visual[i,4] <- sqrt(mean(sqrt(tmp2$diff3), na.rm = TRUE))
+i=i+1
+Visual[i,1] <- as.character(j)
+Visual[i,2] <- "AccumulatedOtherComprehensiveIncomeLossNetOfTax"
+Visual[i,3] <- mean(sqrt(tmp2$diff4), na.rm = TRUE)
+Visual[i,4] <- sqrt(mean(sqrt(tmp2$diff4), na.rm = TRUE))
+i=i+1
+Visual[i,1] <- as.character(j)
+Visual[i,2] <- "Assets"
+Visual[i,3] <- mean(sqrt(tmp2$diff5), na.rm = TRUE)
+Visual[i,4] <- sqrt(mean(sqrt(tmp2$diff5), na.rm = TRUE))
+i=i+1
+Visual[i,1] <- as.character(j)
+Visual[i,2] <- "AssetsCurrent"
+Visual[i,3] <- mean(sqrt(tmp2$diff6), na.rm = TRUE)
+Visual[i,4] <- sqrt(mean(sqrt(tmp2$diff6), na.rm = TRUE))
+i=i+1
+Visual[i,1] <- as.character(j)
+Visual[i,2] <- "CashAndCashEquivalentsAtCarryingValue"
+Visual[i,3] <- mean(sqrt(tmp2$diff7), na.rm = TRUE)
+Visual[i,4] <- sqrt(mean(sqrt(tmp2$diff7), na.rm = TRUE))
+i=i+1
+Visual[i,1] <- as.character(j)
+Visual[i,2] <- "CommonStockValue"
+Visual[i,3] <- mean(sqrt(tmp2$diff8), na.rm = TRUE)
+Visual[i,4] <- sqrt(mean(sqrt(tmp2$diff8), na.rm = TRUE))
+i=i+1
+Visual[i,1] <- as.character(j)
+Visual[i,2] <- "Goodwill"
+Visual[i,3] <- mean(sqrt(tmp2$diff9), na.rm = TRUE)
+Visual[i,4] <- sqrt(mean(sqrt(tmp2$diff9), na.rm = TRUE))
+i=i+1
+Visual[i,1] <- as.character(j)
+Visual[i,2] <- "LiabilitiesCurrent"
+Visual[i,3] <- mean(sqrt(tmp2$diff10), na.rm = TRUE)
+Visual[i,4] <- sqrt(mean(sqrt(tmp2$diff10), na.rm = TRUE))
+i=i+1
+Visual[i,1] <- as.character(j)
+Visual[i,2] <- "PropertyPlantAndEquipmentGross"
+Visual[i,3] <- mean(sqrt(tmp2$diff11), na.rm = TRUE)
+Visual[i,4] <- sqrt(mean(sqrt(tmp2$diff11), na.rm = TRUE))
+i=i+1
+Visual[i,1] <- as.character(j)
+Visual[i,2] <- "StockholdersEquity"
+Visual[i,3] <- mean(sqrt(tmp2$diff12), na.rm = TRUE)
+Visual[i,4] <- sqrt(mean(sqrt(tmp2$diff12), na.rm = TRUE))
+i=i+1
+Visual[i,1] <- as.character(j)
+Visual[i,2] <- "NetIncomeLoss"
+Visual[i,3] <- mean(sqrt(tmp2$diff13), na.rm = TRUE)
+Visual[i,4] <- sqrt(mean(sqrt(tmp2$diff13), na.rm = TRUE))
+i=i+1
+Visual[i,1] <- as.character(j)
+Visual[i,2] <- "Liabilities"
+Visual[i,3] <- mean(sqrt(tmp2$diff14), na.rm = TRUE)
+Visual[i,4] <- sqrt(mean(sqrt(tmp2$diff14), na.rm = TRUE))
+i=i+1
+Visual[i,1] <- as.character(j)
+Visual[i,2] <- "OtherAssetsNoncurrent"
+Visual[i,3] <- mean(sqrt(tmp2$diff15), na.rm = TRUE)
+Visual[i,4] <- sqrt(mean(sqrt(tmp2$diff15), na.rm = TRUE))
+i=i+1
+Visual[i,1] <- as.character(j)
+Visual[i,2] <- "ShareBasedCompensation"
+Visual[i,3] <- mean(sqrt(tmp2$diff16), na.rm = TRUE)
+Visual[i,4] <- sqrt(mean(sqrt(tmp2$diff16), na.rm = TRUE))
+i=i+1
+Visual[i,1] <- as.character(j)
+Visual[i,2] <- "Depreciation"
+Visual[i,3] <- mean(sqrt(tmp2$diff16), na.rm = TRUE)
+Visual[i,4] <- sqrt(mean(sqrt(tmp2$diff16), na.rm = TRUE))
+i=i+1
+Visual[i,1] <- as.character(j)
+Visual[i,2] <- "OperatingIncomeLoss"
+Visual[i,3] <- mean(sqrt(tmp2$diff18), na.rm = TRUE)
+Visual[i,4] <- sqrt(mean(sqrt(tmp2$diff18), na.rm = TRUE))
+i=i+1
+Visual[i,1] <- as.character(j)
+Visual[i,2] <- "CurrentFederalTaxExpenseBenefit"
+Visual[i,3] <- mean(sqrt(tmp2$diff19), na.rm = TRUE)
+Visual[i,4] <- sqrt(mean(sqrt(tmp2$diff19), na.rm = TRUE))
+i=i+1
+j=j+1
+
+
+tmp2 <- tmp[tmp$Year == 2019,]
+Visual[i,1] <- as.character(j)
+Visual[i,2] <- "AccountsPayableCurrent"
+Visual[i,3] <- mean(sqrt(tmp2$diff1), na.rm = TRUE)
+Visual[i,4] <- sqrt(mean(sqrt(tmp2$diff1), na.rm = TRUE))
+i=i+1
+Visual[i,1] <- as.character(j)
+Visual[i,2] <- "AccountsReceivableNetCurrent"
+Visual[i,3] <- mean(sqrt(tmp2$diff2), na.rm = TRUE)
+Visual[i,4] <- sqrt(mean(sqrt(tmp2$diff2), na.rm = TRUE))
+i=i+1
+Visual[i,1] <- as.character(j)
+Visual[i,2] <- "AccumulatedDepreciationDepletionAndAmortizationPropertyPlantAndEquipment"
+Visual[i,3] <- mean(sqrt(tmp2$diff3), na.rm = TRUE)
+Visual[i,4] <- sqrt(mean(sqrt(tmp2$diff3), na.rm = TRUE))
+i=i+1
+Visual[i,1] <- as.character(j)
+Visual[i,2] <- "AccumulatedOtherComprehensiveIncomeLossNetOfTax"
+Visual[i,3] <- mean(sqrt(tmp2$diff4), na.rm = TRUE)
+Visual[i,4] <- sqrt(mean(sqrt(tmp2$diff4), na.rm = TRUE))
+i=i+1
+Visual[i,1] <- as.character(j)
+Visual[i,2] <- "Assets"
+Visual[i,3] <- mean(sqrt(tmp2$diff5), na.rm = TRUE)
+Visual[i,4] <- sqrt(mean(sqrt(tmp2$diff5), na.rm = TRUE))
+i=i+1
+Visual[i,1] <- as.character(j)
+Visual[i,2] <- "AssetsCurrent"
+Visual[i,3] <- mean(sqrt(tmp2$diff6), na.rm = TRUE)
+Visual[i,4] <- sqrt(mean(sqrt(tmp2$diff6), na.rm = TRUE))
+i=i+1
+Visual[i,1] <- as.character(j)
+Visual[i,2] <- "CashAndCashEquivalentsAtCarryingValue"
+Visual[i,3] <- mean(sqrt(tmp2$diff7), na.rm = TRUE)
+Visual[i,4] <- sqrt(mean(sqrt(tmp2$diff7), na.rm = TRUE))
+i=i+1
+Visual[i,1] <- as.character(j)
+Visual[i,2] <- "CommonStockValue"
+Visual[i,3] <- mean(sqrt(tmp2$diff8), na.rm = TRUE)
+Visual[i,4] <- sqrt(mean(sqrt(tmp2$diff8), na.rm = TRUE))
+i=i+1
+Visual[i,1] <- as.character(j)
+Visual[i,2] <- "Goodwill"
+Visual[i,3] <- mean(sqrt(tmp2$diff9), na.rm = TRUE)
+Visual[i,4] <- sqrt(mean(sqrt(tmp2$diff9), na.rm = TRUE))
+i=i+1
+Visual[i,1] <- as.character(j)
+Visual[i,2] <- "LiabilitiesCurrent"
+Visual[i,3] <- mean(sqrt(tmp2$diff10), na.rm = TRUE)
+Visual[i,4] <- sqrt(mean(sqrt(tmp2$diff10), na.rm = TRUE))
+i=i+1
+Visual[i,1] <- as.character(j)
+Visual[i,2] <- "PropertyPlantAndEquipmentGross"
+Visual[i,3] <- mean(sqrt(tmp2$diff11), na.rm = TRUE)
+Visual[i,4] <- sqrt(mean(sqrt(tmp2$diff11), na.rm = TRUE))
+i=i+1
+Visual[i,1] <- as.character(j)
+Visual[i,2] <- "StockholdersEquity"
+Visual[i,3] <- mean(sqrt(tmp2$diff12), na.rm = TRUE)
+Visual[i,4] <- sqrt(mean(sqrt(tmp2$diff12), na.rm = TRUE))
+i=i+1
+Visual[i,1] <- as.character(j)
+Visual[i,2] <- "NetIncomeLoss"
+Visual[i,3] <- mean(sqrt(tmp2$diff13), na.rm = TRUE)
+Visual[i,4] <- sqrt(mean(sqrt(tmp2$diff13), na.rm = TRUE))
+i=i+1
+Visual[i,1] <- as.character(j)
+Visual[i,2] <- "Liabilities"
+Visual[i,3] <- mean(sqrt(tmp2$diff14), na.rm = TRUE)
+Visual[i,4] <- sqrt(mean(sqrt(tmp2$diff14), na.rm = TRUE))
+i=i+1
+Visual[i,1] <- as.character(j)
+Visual[i,2] <- "OtherAssetsNoncurrent"
+Visual[i,3] <- mean(sqrt(tmp2$diff15), na.rm = TRUE)
+Visual[i,4] <- sqrt(mean(sqrt(tmp2$diff15), na.rm = TRUE))
+i=i+1
+Visual[i,1] <- as.character(j)
+Visual[i,2] <- "ShareBasedCompensation"
+Visual[i,3] <- mean(sqrt(tmp2$diff16), na.rm = TRUE)
+Visual[i,4] <- sqrt(mean(sqrt(tmp2$diff16), na.rm = TRUE))
+i=i+1
+Visual[i,1] <- as.character(j)
+Visual[i,2] <- "Depreciation"
+Visual[i,3] <- mean(sqrt(tmp2$diff16), na.rm = TRUE)
+Visual[i,4] <- sqrt(mean(sqrt(tmp2$diff16), na.rm = TRUE))
+i=i+1
+Visual[i,1] <- as.character(j)
+Visual[i,2] <- "OperatingIncomeLoss"
+Visual[i,3] <- mean(sqrt(tmp2$diff18), na.rm = TRUE)
+Visual[i,4] <- sqrt(mean(sqrt(tmp2$diff18), na.rm = TRUE))
+i=i+1
+Visual[i,1] <- as.character(j)
+Visual[i,2] <- "CurrentFederalTaxExpenseBenefit"
+Visual[i,3] <- mean(sqrt(tmp2$diff19), na.rm = TRUE)
+Visual[i,4] <- sqrt(mean(sqrt(tmp2$diff19), na.rm = TRUE))
+i=i+1
+j=j+1
+
+tmp2 <- tmp[tmp$Year == 2020,]
+Visual[i,1] <- as.character(j)
+Visual[i,2] <- "AccountsPayableCurrent"
+Visual[i,3] <- mean(sqrt(tmp2$diff1), na.rm = TRUE)
+Visual[i,4] <- sqrt(mean(sqrt(tmp2$diff1), na.rm = TRUE))
+i=i+1
+Visual[i,1] <- as.character(j)
+Visual[i,2] <- "AccountsReceivableNetCurrent"
+Visual[i,3] <- mean(sqrt(tmp2$diff2), na.rm = TRUE)
+Visual[i,4] <- sqrt(mean(sqrt(tmp2$diff2), na.rm = TRUE))
+i=i+1
+Visual[i,1] <- as.character(j)
+Visual[i,2] <- "AccumulatedDepreciationDepletionAndAmortizationPropertyPlantAndEquipment"
+Visual[i,3] <- mean(sqrt(tmp2$diff3), na.rm = TRUE)
+Visual[i,4] <- sqrt(mean(sqrt(tmp2$diff3), na.rm = TRUE))
+i=i+1
+Visual[i,1] <- as.character(j)
+Visual[i,2] <- "AccumulatedOtherComprehensiveIncomeLossNetOfTax"
+Visual[i,3] <- mean(sqrt(tmp2$diff4), na.rm = TRUE)
+Visual[i,4] <- sqrt(mean(sqrt(tmp2$diff4), na.rm = TRUE))
+i=i+1
+Visual[i,1] <- as.character(j)
+Visual[i,2] <- "Assets"
+Visual[i,3] <- mean(sqrt(tmp2$diff5), na.rm = TRUE)
+Visual[i,4] <- sqrt(mean(sqrt(tmp2$diff5), na.rm = TRUE))
+i=i+1
+Visual[i,1] <- as.character(j)
+Visual[i,2] <- "AssetsCurrent"
+Visual[i,3] <- mean(sqrt(tmp2$diff6), na.rm = TRUE)
+Visual[i,4] <- sqrt(mean(sqrt(tmp2$diff6), na.rm = TRUE))
+i=i+1
+Visual[i,1] <- as.character(j)
+Visual[i,2] <- "CashAndCashEquivalentsAtCarryingValue"
+Visual[i,3] <- mean(sqrt(tmp2$diff7), na.rm = TRUE)
+Visual[i,4] <- sqrt(mean(sqrt(tmp2$diff7), na.rm = TRUE))
+i=i+1
+Visual[i,1] <- as.character(j)
+Visual[i,2] <- "CommonStockValue"
+Visual[i,3] <- mean(sqrt(tmp2$diff8), na.rm = TRUE)
+Visual[i,4] <- sqrt(mean(sqrt(tmp2$diff8), na.rm = TRUE))
+i=i+1
+Visual[i,1] <- as.character(j)
+Visual[i,2] <- "Goodwill"
+Visual[i,3] <- mean(sqrt(tmp2$diff9), na.rm = TRUE)
+Visual[i,4] <- sqrt(mean(sqrt(tmp2$diff9), na.rm = TRUE))
+i=i+1
+Visual[i,1] <- as.character(j)
+Visual[i,2] <- "LiabilitiesCurrent"
+Visual[i,3] <- mean(sqrt(tmp2$diff10), na.rm = TRUE)
+Visual[i,4] <- sqrt(mean(sqrt(tmp2$diff10), na.rm = TRUE))
+i=i+1
+Visual[i,1] <- as.character(j)
+Visual[i,2] <- "PropertyPlantAndEquipmentGross"
+Visual[i,3] <- mean(sqrt(tmp2$diff11), na.rm = TRUE)
+Visual[i,4] <- sqrt(mean(sqrt(tmp2$diff11), na.rm = TRUE))
+i=i+1
+Visual[i,1] <- as.character(j)
+Visual[i,2] <- "StockholdersEquity"
+Visual[i,3] <- mean(sqrt(tmp2$diff12), na.rm = TRUE)
+Visual[i,4] <- sqrt(mean(sqrt(tmp2$diff12), na.rm = TRUE))
+i=i+1
+Visual[i,1] <- as.character(j)
+Visual[i,2] <- "NetIncomeLoss"
+Visual[i,3] <- mean(sqrt(tmp2$diff13), na.rm = TRUE)
+Visual[i,4] <- sqrt(mean(sqrt(tmp2$diff13), na.rm = TRUE))
+i=i+1
+Visual[i,1] <- as.character(j)
+Visual[i,2] <- "Liabilities"
+Visual[i,3] <- mean(sqrt(tmp2$diff14), na.rm = TRUE)
+Visual[i,4] <- sqrt(mean(sqrt(tmp2$diff14), na.rm = TRUE))
+i=i+1
+Visual[i,1] <- as.character(j)
+Visual[i,2] <- "OtherAssetsNoncurrent"
+Visual[i,3] <- mean(sqrt(tmp2$diff15), na.rm = TRUE)
+Visual[i,4] <- sqrt(mean(sqrt(tmp2$diff15), na.rm = TRUE))
+i=i+1
+Visual[i,1] <- as.character(j)
+Visual[i,2] <- "ShareBasedCompensation"
+Visual[i,3] <- mean(sqrt(tmp2$diff16), na.rm = TRUE)
+Visual[i,4] <- sqrt(mean(sqrt(tmp2$diff16), na.rm = TRUE))
+i=i+1
+Visual[i,1] <- as.character(j)
+Visual[i,2] <- "Depreciation"
+Visual[i,3] <- mean(sqrt(tmp2$diff16), na.rm = TRUE)
+Visual[i,4] <- sqrt(mean(sqrt(tmp2$diff16), na.rm = TRUE))
+i=i+1
+Visual[i,1] <- as.character(j)
+Visual[i,2] <- "OperatingIncomeLoss"
+Visual[i,3] <- mean(sqrt(tmp2$diff18), na.rm = TRUE)
+Visual[i,4] <- sqrt(mean(sqrt(tmp2$diff18), na.rm = TRUE))
+i=i+1
+Visual[i,1] <- as.character(j)
+Visual[i,2] <- "CurrentFederalTaxExpenseBenefit"
+Visual[i,3] <- mean(sqrt(tmp2$diff19), na.rm = TRUE)
+Visual[i,4] <- sqrt(mean(sqrt(tmp2$diff19), na.rm = TRUE))
+
+#write.csv(Visual, "Visual.csv", row.names = FALSE)
+Visual <- read.csv("Visual.csv")
+
+library(ggplot2)
+theme_set(theme_minimal())
+ggplot(Visual,aes(y = RMSE,x = Year,color = Variable)) + 
+  geom_line() + theme(axis.text=element_text(size=14), legend.text=element_text(size=14)) +
+  ggtitle("RMSE XBRL vs Compustat Fundamentals")
+
+ggplot(Visual,aes(y = AverageDev,x = Year,color = Variable)) + 
+  geom_line() + scale_y_continuous(labels = comma)+ 
+  geom_line() + theme(axis.text=element_text(size=14), legend.text=element_text(size=14))+
+  ggtitle("Average Deviation XBRL vs Compustat Fundamentals")
+
+```
+
+
+
+```{r}
+Complete <- read.csv("completeMatch.csv")
+Complete <- Complete[rowSums(is.na(Complete))<9174,]
+
+## Duplicates
+tmp <- Complete[,c(1,2,3,4,which(endsWith(colnames(Complete), "1")))]
+Complete <- Complete[,-c(which(endsWith(colnames(Complete), "1")))]
+colnames(tmp) <- gsub("1$", "", colnames(tmp))
+AA <- colnames(tmp)
+for(name in AA){
+  if(name %in% colnames(Complete[-c(1,2,3,4)])){
+  Complete[,name] <- ifelse(is.na(Complete[,name]), tmp[,name],Complete[,name])
+  }
+}
+
+tmp <- Complete[,c(1,2,3,4,which(endsWith(colnames(Complete), "2")))]
+Complete <- Complete[,-c(which(endsWith(colnames(Complete), "2")))]
+colnames(tmp) <- gsub("2$", "", colnames(tmp))
+AA <- colnames(tmp)
+for(name in AA){
+  if(name %in% colnames(Complete[-c(1,2,3,4)])){
+  Complete[,name] <- ifelse(is.na(Complete[,name]), tmp[,name],Complete[,name])
+  }
+}
+
+tmp <- Complete[,c(1,2,3,4,which(endsWith(colnames(Complete), "3")))]
+Complete <- Complete[,-c(which(endsWith(colnames(Complete), "3")))]
+colnames(tmp) <- gsub("3$", "", colnames(tmp))
+AA <- colnames(tmp)
+for(name in AA){
+  if(name %in% colnames(Complete[-c(1,2,3,4)])){
+  Complete[,name] <- ifelse(is.na(Complete[,name]), tmp[,name],Complete[,name])
+  }
+}
+
+tmp <- Complete[,c(1,2,3,4,which(endsWith(colnames(Complete), "4")))]
+Complete <- Complete[,-c(which(endsWith(colnames(Complete), "4")))]
+colnames(tmp) <- gsub("4$", "", colnames(tmp))
+AA <- colnames(tmp)
+for(name in AA){
+  if(name %in% colnames(Complete[-c(1,2,3,4)])){
+  Complete[,name] <- ifelse(is.na(Complete[,name]), tmp[,name],Complete[,name])
+  }
+}
+
+Complete <- Complete %>%  distinct(Ticker, Year, endDate, .keep_all = TRUE)
+#write.csv(Complete, "Cleaned1.csv", row.names = F)
+```
+
+
+
+```{r}
+## Remove missing and negative total asset observations 
+Complete <- Complete[-which(is.na(Complete$us.gaap_Assets)),]
+Complete <- Complete[which(Complete$us.gaap_Assets >0),]
+Complete <- read.csv("Cleaned1.csv")
+Complete <- Complete %>% arrange(.,by = c(Ticker))
+
+
+## Look at companies with 3 subsequent years of data
+New <- Complete[,c(2,3,4)]
+New$Indicator[1] <- "Last"
+
+
+for(i in 2:nrow(New)){
+ New$Indicator[i] <- ifelse(New[i,1] != New[i-1,1]& New[i,1] == New[i+1,1] & as.numeric(New[i,3]) == as.numeric(New[i+1,3])+1,"Last",ifelse(New[i,1] == New[i-1,1]& New[i,1] == New[i+1,1] & as.numeric(New[i,3]) == as.numeric(New[i+1,3])+1 & as.numeric(New[i,3]) != as.numeric(New[i-1,3]-1),"Last",
+                         ifelse(New[i,1] == New[i-1,1]& New[i,1] == New[i+1,1] & as.numeric(New[i,3]) == as.numeric(New[i+1,3])+1 & 
+                           as.numeric(New[i,3]) == as.numeric(New[i-1,3])-1,"Middle", ifelse(New[i,1] == New[i-1,1] & New[i,1] != New[i+1,1] & 
+                            as.numeric(New[i,3]) == as.numeric(New[i-1,3])-1,"First",ifelse(New[i,1] == New[i-1,1] & New[i,1] == New[i+1,1] & 
+                            as.numeric(New[i,3]) == as.numeric(New[i-1,3])-1 & as.numeric(New[i,3]) != as.numeric(New[i+1,3])+1,"First","No")))))
+}
+Complete$Indicator <- New$Indicator
+
+Complete <- Complete[Complete$Indicator != "No",]
+Complete <- Complete[rowSums(is.na(Complete))<8973,]
+Complete <- Complete[,colSums(is.na(Complete))<29000]
+
+
+Complete[is.na(Complete)] <- 0 
+
+
+Complete2 <- Complete
+rm(Complete)
+
+for(i in c(5:19,21:889)){
+ Complete2[,i] <- ifelse(abs(Complete2[,i])>10000, Complete2[,i]/Complete2$us.gaap_Assets, Complete2[,i])
+}
+
+
+Lagged <- Complete2[,5:889]
+for(i in 1:nrow(Complete2)){
+ ifelse(Complete2$Indicator[i] == "Middle", Lagged[i,1:885] <- Complete2[i+1,5:889],Lagged[i,1:885] <- "")  
+}
+
+colnames(Lagged) <- paste0("Lagged_", colnames(Lagged))
+Complete2 <- cbind(Complete2, Lagged)
+write.csv(Complete2, "Cleaned2.1.csv", row.names = F)
+Complete2 <- read.csv("Cleaned2.1.csv")
+
+#
+Delta <- Complete2[,c(5:889)]
+for(i in 1:nrow(Complete2)){
+Delta[i,1:885] <- (as.numeric(Complete2[i,5:889])-as.numeric(Complete2[i,891:1775]))/as.numeric(Complete2[i,891:1775]) 
+print(i)
+}
+colnames(Delta) <- paste0("Delta_", colnames(Delta))
+
+Complete2 <- cbind(Complete2, Delta)
+write.csv(Complete2, "Cleaned3.1.csv", row.names = FALSE)
+### Remove Inf/NaN
+Complete3 <- read.csv("Cleaned3.1.csv")
+
+library(DescTools)
+for(i in c(5:889,891:2660)){
+ Complete3[,i] <- Winsorize(Complete3[,i], na.rm=TRUE) 
+}
+
+```
+
+```{r}
+COMP <- read.csv("Compustat_match.csv")
+COMP <- COMP %>% group_by(fyear,tic) %>% summarise(EPS = mean(epspi))
+Complete3 <- left_join(Complete3,COMP, by = c("Ticker" = "tic", "Year" = "fyear"))
+Complete3$us.gaap_EarningsPerShareBasic <- ifelse(Complete3$us.gaap_EarningsPerShareBasic == 0 & !is.na(Complete3$EPS), Complete3$EPS, Complete3$us.gaap_EarningsPerShareBasic) 
+
+Complete3$OneYearForwardEPS <- NA
+
+for(i in 1:nrow(Complete3)){
+  if(Complete3$Indicator[i] == "Middle"){
+    Complete3$OneYearForwardEPS[i] <- Complete3$us.gaap_EarningsPerShareBasic[i-1]
+  }
+}
+```
+
+
+```{r}
+MlDataset <- Complete3[Complete3$Indicator == "Middle",]
+
+MlDataset$endDate <- as.character(as.Date(as.character(MlDataset$endDate),format="%Y-%m-%d"))
+MlDataset$OneYearForwardEPS <- Winsorize(MlDataset$OneYearForwardEPS, na.rm=TRUE) 
+MlDataset$EPS_Movement <- as.factor(ifelse((MlDataset$OneYearForwardEPS - MlDataset$us.gaap_EarningsPerShareBasic)>0, 1,0))
+MlDataset <- MlDataset %>% select(-Indicator, -EPS)
+MlDataset[is.na(MlDataset)] <- 0
+#write.csv(MlDataset, "MlDataset.1.csv", row.names = F)
+MlDataset <- read.csv("MlDataset.1.csv")
+MlDataset <- MlDataset[,colSums(MlDataset == 0)<15300]
+
+```
+
+
+```{r}
+IBES <- read.csv("IBES-Forecasts2.csv")
+
+IBES$Fiscal_Year_End  <- as.character(as.Date(as.character(IBES$Fiscal_Year_End ),format="%Y%m%d"))
+IBES$Prediction_Date  <- as.character(as.Date(as.character(IBES$Prediction_Date),format="%Y%m%d"))
+IBES$Announcement_Date <- as.character(as.Date(as.character(IBES$Announcement_Date),format="%Y%m%d"))
+IBES$Actual_Date <- as.character(as.Date(as.character(IBES$Actual_Date),format="%Y%m%d"))
+
+IBES$diff_in_days <- as.numeric(difftime(as.character(IBES$Prediction_Date), as.character(IBES$Announcement_Date), units = c("days")))
+
+IBES <- IBES[IBES$diff_in_days <= 1,]
+IBES_Match <- IBES %>% select(Ticker, Fiscal_Year_End, Predicted_EPS, Actual.EPS) %>% group_by(Ticker, Fiscal_Year_End) %>% summarise(mean_P_EPS = mean(Predicted_EPS, na.rm = T), mean_A_EPS = mean(Actual.EPS, na.rm = T))
+```
+
+Since sometimes errors occur when scraping the data from the SEC website, several robustness improving measures have been implemented in the algorithm. For example, a document is requested several times if an error occurs that company information is not available. Moreover, to avoid too many website requests, resulting in the SEC servers red flagging the IP address of the user, system pauses have been included where necessary. 
+
+This has been classified by grouping the observations based on ticker and reporting year and creating an indicator variable for these observations. The value ‘last’ is assigned if the previous observation does not share the same ticker, the next observation shares the same ticker and the next observation contains the annual reporting data from the previous year.  The value ‘middle’ is assigned if both the previous and the next observation share the same ticker, and the reporting year is the year in between the previous and the next observation. The ‘first’ value shows if an observation is the first of a block of three at minimum, and is assigned when it is one year before the previous observation and shares the same ticker, but does not share the ticker with the next observation. Finally,
+
+
+## Model preps
+Let's start with a stratified train-test split. We use 60% of the data for training, and keep the remaining 40% for testing:
+```{r}
+MlDataset <- read.csv("MlDataset.1.csv")
+## Remove tickers
+ID <- read.csv("Identifying.csv")
+ID2 <- ID[ID$Remove == 1,]
+ID2 <- as.character(ID2$ï..Ticker)
+MlDataset <- MlDataset[!MlDataset$Ticker %in% ID2,]
+
+colnames(ID) <- c("Ticker", "Sic", "Remove")
+SUMMARY <- left_join(MlDataset, ID, by = ("Ticker" = "Ticker"))
+SUMMARY <- SUMMARY %>% select(Ticker, Year, us.gaap_Assets, Sic, EPS_Movement)
+
+
+##Downsize columns
+MlDataset <- MlDataset[,colSums(MlDataset == 0)<11085]
+MlDataset$EPS_Movement <- as.factor(MlDataset$EPS_Movement)
+library("tidymodels")
+library(dplyr)
+set.seed(12)
+model_split <- initial_split(MlDataset, prop = 0.8, strata = EPS_Movement)
+```
+
+```{r}
+Summary <- SUMMARY %>% group_by(Year) %>%  summarise(n = n())
+Summary[4:11,]
+
+options("scipen"=100, "digits"=4)
+
+Summary <- SUMMARY %>% group_by(Year) %>%  summarise(n = n())
+Summary[3:10,]
+
+SUMMARY$Size <- ifelse(SUMMARY$us.gaap_Assets<10000000, "<10M",
+ifelse(SUMMARY$us.gaap_Assets>10000000 & SUMMARY$us.gaap_Assets<50000000,"10M-50M",
+ifelse(SUMMARY$us.gaap_Assets>50000000 & SUMMARY$us.gaap_Assets<200000000,"50M-200M",
+ifelse(SUMMARY$us.gaap_Assets>200000000 & SUMMARY$us.gaap_Assets<500000000,"200M-500M",
+ifelse(SUMMARY$us.gaap_Assets>500000000 & SUMMARY$us.gaap_Assets<1000000000,"500M-1B",
+ifelse(SUMMARY$us.gaap_Assets>1000000000 & SUMMARY$us.gaap_Assets<2000000000,"1B-2B",
+ifelse(SUMMARY$us.gaap_Assets>2000000000 & SUMMARY$us.gaap_Assets<5000000000,"2B-5B",
+ifelse(SUMMARY$us.gaap_Assets>5000000000 & SUMMARY$us.gaap_Assets<10000000000,"5B-10B",
+ifelse(SUMMARY$us.gaap_Assets>10000000000,">10B","")))))))))
+
+  
+Summary <- SUMMARY %>% group_by(Size) %>%  summarise(n = n())
+Summary[4:11,]
+
+SUMMARY$Industry <- ifelse(SUMMARY$Sic <1000, "Agriculture, forestry and fishing",
+ifelse(SUMMARY$Sic>=1000 & SUMMARY$Sic<1500,"Mining",
+ifelse(SUMMARY$Sic>=1500 & SUMMARY$Sic<1800,"Construction",
+ifelse(SUMMARY$Sic>=2000 & SUMMARY$Sic<4000,"Manufacturing",
+ifelse(SUMMARY$Sic>=4000 & SUMMARY$Sic<5000,"Transportation, communication and utilities",
+ifelse(SUMMARY$Sic>=5000 & SUMMARY$Sic<6000,"Wholesale and retail trade",
+ifelse(SUMMARY$Sic>=7000 & SUMMARY$Sic<9000,"Services",
+ifelse(SUMMARY$Sic>=9000 & SUMMARY$Sic<10000,"Public administration",""))))))))
+
+
+Summary <- SUMMARY %>% group_by(Industry) %>%  summarise(n = n())
+
+Summary
+```
+
+
+
+
+Let's create the training and testing sets:
+```{r}
+data_train <- training(model_split)
+data_test <- testing(model_split)
+```
+
+We will do model tuning on the training set only, using 10-fold cross-validation. We therefore create the folds we will use too, using the following:
+```{r}
+set.seed(12)
+cv_folds <- vfold_cv(data_train, v = 10, strata = EPS_Movement)
+```
+
+
+## Lasso regression
+```{r}
+library(glmnet)
+logreg_recipe <-  recipe(EPS_Movement ~ ., data = data_train)  %>%  step_rm(Year, endDate, Ticker, Publication, OneYearForwardEPS)
+  
+
+lasso_logreg <- logistic_reg(penalty = tune(), mixture = 1) %>% set_engine("glmnet")
+lasso_wf <- workflow() %>% 
+  add_recipe(logreg_recipe) %>% 
+  add_model(lasso_logreg)
+```
+
+Now we are ready to tune the models. For that, we need to specify a tuning grid. This can be hard to get right. We will come back to this point in the next subsection.
+
+Let's set up two grids for $\lambda$, one for the lasso and one for ridge regularization. This may take trial-and-error. The values given here should work well for this problem:
+
+```{r}
+grid_lasso <- tibble(penalty = 10^(seq(from = -5, to = -1, length.out = 100)))
+```
+
+
+Now that we have these, we can use `tune_grid()` for 10-fold CV as follows:
+```{r}
+class_metrics <- metric_set(accuracy, kap, roc_auc)
+lasso_tune <- lasso_wf %>% 
+  tune_grid(resamples = cv_folds, 
+            grid = grid_lasso,
+            metrics = class_metrics)
+```
+
+Let's collect the metrics and create a plot of the accuracy for the lasso model:
+
+```{r}
+lasso_tune_metrics <- lasso_tune %>% 
+  collect_metrics()
+lasso_tune_metrics %>% filter(.metric == "bal_accuracy") %>% 
+  ggplot(aes(x = penalty, y = mean, 
+             ymin = mean - std_err, ymax = mean + std_err)) + 
+  geom_errorbar(alpha = 0.5) + 
+  geom_point() + 
+  scale_x_log10() + 
+  labs(y = "Accuracy", x = expression(lambda))
+```
+
+```{r}
+lasso_1se_model <- select_by_one_std_err(lasso_tune, metric = "accuracy", desc(penalty))
+lasso_1se_model
+```
+
+Note here that we have to specify, using `desc(penalty)`, how to arrange the models from most simple to most complex. We do that in descending order with $\lambda$ (`penalty`), since larger values give simpler models.
+
+We can now finalize the workflow for the lasso model:
+
+```{r}
+lasso_wf_tuned <- 
+  lasso_wf %>% 
+  finalize_workflow(lasso_1se_model)
+lasso_wf_tuned
+```
+
+We can do this by utilizing the `last_fit()` function. For the lasso model, we have:
+
+```{r}
+lasso_last_fit <- lasso_wf_tuned %>% 
+  last_fit(model_split, metrics = class_metrics)
+lasso_last_fit %>% collect_predictions() %>% select(.pred_class) 
+Lasso <- as.data.frame(lasso_last_fit$.predictions)
+conf_mat(Lasso, EPS_Movement, .pred_class)
+
+lasso_last_fit %>% collect_predictions() %>% 
+  gain_curve(EPS_Movement, .pred_0) %>% 
+  autoplot()
+```
+
+The performance on the test set for this model is:
+
+```{r}
+lasso_test_metrics <- lasso_last_fit %>% collect_metrics()
+lasso_test_metrics
+```
+```{r}
+library(vip)
+library(forcats)
+
+lasso_model_vi <- logistic_reg(penalty = lasso_1se_model$penalty) %>% set_engine("glmnet")
+lasso_wf_vi <- workflow() %>% 
+  add_recipe(logreg_recipe) %>% 
+  add_model(lasso_model_vi)
+
+
+set.seed(12)
+rf_vi_fit <- lasso_wf_vi %>% fit(data = data_test)
+rf_vi_fit %>% pull_workflow_fit() %>% vi()
+rf_vi_fit %>% pull_workflow_fit() %>% vip(geom = "point", num_features = 20)
+
+
+```
+
+
+## Random forests
+
+```{r message = FALSE}
+#install.packages("ranger")
+library("ranger")
+library("doParallel")
+
+MlDataset <- read.csv("MlDataset.1.csv")
+## Remove tickers
+ID <- read.csv("Identifying.csv")
+ID <- ID[ID$Remove == 1,]
+ID2 <- as.character(ID$ï..Ticker)
+MlDataset <- MlDataset[!MlDataset$Ticker %in% ID2,]
+
+##Downsize columns
+MlDataset <- MlDataset[,colSums(MlDataset == 0)<11085]
+MlDataset$EPS_Movement <- as.factor(MlDataset$EPS_Movement)
+```
+
+
+```{r}
+rf_recipe <- recipe(EPS_Movement ~ ., data = data_train) %>% step_rm(Year, endDate, Ticker, Publication, OneYearForwardEPS)
+```
+
+
+```{r}
+
+rf_model_tune <- rand_forest(mtry = tune(), trees = 500) %>%
+  set_mode("classification") %>%
+  set_engine("ranger")
+```
+
+```{r}
+rf_tune_wf <- workflow() %>%
+  add_recipe(rf_recipe) %>%
+  add_model(rf_model_tune)
+rf_tune_wf
+```
+
+
+```{r}
+class_metrics <- metric_set(accuracy, kap,  roc_auc)
+
+registerDoParallel()
+
+set.seed(12)
+rf_tune_res <- tune_grid(
+  rf_tune_wf,
+  resamples = cv_folds,
+  grid = tibble(mtry = c(65)),
+  metrics = class_metrics
+)
+
+rf_tune_res %>%
+  collect_metrics()
+
+rf_tune_res %>%
+  collect_metrics() %>%
+  filter(.metric %in% c("roc_auc", "accuracy", "kap")) %>%
+  ggplot(aes(x = mtry, y = mean, ymin = mean - std_err, ymax = mean + std_err, 
+             colour = .metric)) +
+  geom_errorbar() + 
+  geom_line() +
+  geom_point() +
+  facet_grid(.metric ~ ., scales = "free_y") 
+
+best_acc <- select_best(rf_tune_res, "roc_auc")
+rf_final_wf <- finalize_workflow(rf_tune_wf, best_acc)
+rf_final_wf
+
+set.seed(12)
+rf_final_fit <- rf_final_wf %>%
+  last_fit(model_split, metrics = class_metrics)
+
+rf_final_fit %>%
+  collect_metrics()
+
+rf_final_fit %>% collect_predictions() %>% 
+  gain_curve(EPS_Movement, .pred_0) %>% 
+  autoplot()
+
+```
+
+
+
+
+Variance Importance measures 
+```{r}
+rf_model_vi <- rand_forest(mtry = 65, trees = 5000) %>%
+  set_mode("classification") %>%
+  set_engine("ranger", importance = "permutation")
+rf_vi_wf <- workflow() %>% 
+  add_model(rf_model_vi) %>% 
+  add_recipe(rf_recipe)
+
+set.seed(12)
+rf_vi_fit <- rf_vi_wf %>% fit(data = data_train)
+
+rf_vi_fit %>% pull_workflow_fit() %>% vi()
+
+rf_vi_fit %>% pull_workflow_fit() %>% vip(geom = "point", num_features = 20)
+
+```
+
+
+
+
+## GBM
+
+
+```{r}
+library("tidymodels")
+library("doParallel")
+#install.packages("xgboost")
+library("themis")
+library("xgboost")
+```
+
+```{r}
+xgb_recipe <- recipe(EPS_Movement ~ ., data = data_train) %>% step_rm(Year, endDate, Ticker, Publication, OneYearForwardEPS)
+```
+
+```{r}
+xgb_model_tune <- 
+  boost_tree(trees = tune(), tree_depth = tune(), 
+             learn_rate = tune(), stop_iter = 1000) %>%
+  set_mode("classification") %>%
+  set_engine("xgboost")
+```
+
+```{r}
+xgb_tune_wf <- workflow() %>%
+  add_recipe(xgb_recipe) %>%
+  add_model(xgb_model_tune)
+xgb_tune_wf
+```
+
+
+
+```{r}
+registerDoParallel()
+set.seed(12)
+xgb_grid <- expand.grid(trees = 500 * 1:5, 
+                        learn_rate = c(0.3, 0.1, 0.03, 0.01, 0.003, 0.001), 
+                        tree_depth = 1:2)
+```
+
+```{r}
+xgb_tune_res <- tune_grid(
+  xgb_tune_wf,
+  resamples = cv_folds,
+  grid = xgb_grid,
+  metrics = class_metrics
+)
+```
+
+
+```{r}
+xgb_tune_metrics <- xgb_tune_res %>%
+  collect_metrics()
+xgb_tune_metrics
+```
+
+```{r}
+xgb_tune_metrics %>% 
+  filter(.metric == "accuracy") %>% 
+  ggplot(aes(x = trees, y = mean, 
+             colour = factor(tree_depth))) +
+  geom_path() +
+  labs(y = "Accuracy") + 
+  facet_wrap(~ learn_rate)
+```
+
+```{r}
+xgb_best <- xgb_tune_metrics %>% 
+  filter(.metric == "accuracy", tree_depth == 2, learn_rate == 0.03, trees == 1500)
+xgb_final_wf <- finalize_workflow(xgb_tune_wf, xgb_best)
+xgb_final_wf
+```
+
+```{r}
+xgb_final_fit <- xgb_final_wf %>%
+  last_fit(model_split, metrics = class_metrics)
+```
+
+Confusion Matrix
+```{r}
+xgb_final_fit %>% collect_predictions() %>% 
+  conf_mat(truth = EPS_Movement , estimate = .pred_class) 
+```
+
+
+ROC curve
+```{r}
+xgb_final_fit %>% collect_predictions() %>% 
+  roc_curve(EPS_Movement, .predictions$.predictions) %>% 
+  autoplot()
+
+
+xgb_final_fit %>% collect_predictions() %>% 
+  gain_curve(truth = EPS_Movement, estimate = .pred_0) %>% 
+  autoplot()
+
+```
+
+
+Variance Importance measures 
+```{r}
+xgb_model_vi <-  boost_tree(trees = 1500, tree_depth = 2, 
+             learn_rate = 0.03, stop_iter = 1000) %>%
+  set_mode("classification") %>%
+  set_engine("xgboost", importance = "permutation")
+
+xgb_vi_wf <- workflow() %>% 
+  add_model(xgb_model_vi) %>% 
+  add_recipe(xgb_recipe)
+
+set.seed(12)
+xgb_vi_fit <- xgb_vi_wf %>% fit(data = data_train)
+
+xgb_vi_fit %>% pull_workflow_fit() %>% vi()
+
+xgb_vi_fit %>% pull_workflow_fit() %>% vip(geom = "point", num_features = 17)
+
+```
+
+
+
+
+
+# IBES
+
+```{r}
+data_test <- testing(model_split)
+data_test$endDate <- as.character(as.Date(as.character(data_test$endDate),format="%d/%m/%Y"))
+Combined <- left_join(data_test, IBES_Match, by = c("Ticker" = "Ticker", "endDate" = "Fiscal_Year_End"))
+Combined$MoveIBES <- ifelse(Combined$mean_P_EPS-Combined$mean_A_EPS>0,1,0)
+#Combined$EPS_Movement <- as.numeric(Combined$EPS_Movement)
+
+Combined$MoveIBES <- ifelse(is.na(Combined$MoveIBES), as.numeric(Combined$EPS_Movement)-1, Combined$MoveIBES)
+#Combined$MoveIBES <- ifelse(Combined$MoveIBES == 1, 0, 1)
+
+SUMMARY <- SUMMARY %>% distinct(Ticker, Sic)
+
+Combined <- left_join(Combined, SUMMARY, by = c("Ticker" = "Ticker"))
+
+Combined$Size <- ifelse(Combined$us.gaap_Assets<10000000, "<10M",
+ifelse(Combined$us.gaap_Assets>10000000 & Combined$us.gaap_Assets<50000000,"10M-50M",
+ifelse(Combined$us.gaap_Assets>50000000 & Combined$us.gaap_Assets<200000000,"50M-200M",
+ifelse(Combined$us.gaap_Assets>200000000 & Combined$us.gaap_Assets<500000000,"200M-500M",
+ifelse(Combined$us.gaap_Assets>500000000 & Combined$us.gaap_Assets<1000000000,"500M-1B",
+ifelse(Combined$us.gaap_Assets>1000000000 & Combined$us.gaap_Assets<2000000000,"1B-2B",
+ifelse(Combined$us.gaap_Assets>2000000000 & Combined$us.gaap_Assets<5000000000,"2B-5B",
+ifelse(Combined$us.gaap_Assets>5000000000 & Combined$us.gaap_Assets<10000000000,"5B-10B",
+ifelse(Combined$us.gaap_Assets>10000000000,">10B","")))))))))
+
+ 
+Combined$Industry <- ifelse(Combined$Sic <1000, "Agriculture, forestry and fishing",
+ifelse(Combined$Sic>=1000 & Combined$Sic<1500,"Mining",
+ifelse(Combined$Sic>=1500 & Combined$Sic<1800,"Construction",
+ifelse(Combined$Sic>=2000 & Combined$Sic<4000,"Manufacturing",
+ifelse(Combined$Sic>=4000 & Combined$Sic<5000,"Transportation, communication and utilities",
+ifelse(Combined$Sic>=5000 & Combined$Sic<6000,"Wholesale and retail trade",
+ifelse(Combined$Sic>=7000 & Combined$Sic<9000,"Services",
+ifelse(Combined$Sic>=9000 & Combined$Sic<10000,"Public administration",""))))))))
+
+Combined <- Combined %>% select(endDate, Ticker, Year, EPS_Movement, MoveIBES, Sic, Size, Industry, LassoPredictions, RFPredictions, GBMPredictions)
+
+tmp <- lasso_last_fit %>% collect_predictions() %>% select(.pred_class) 
+tmp <- as.numeric(tmp$.pred_class) -1
+Combined$LassoPredictions <- tmp
+
+tmp <- rf_final_fit %>% collect_predictions() %>% select(.pred_class)
+tmp <- as.numeric(tmp$.pred_class) -1
+Combined$RFPredictions <- tmp
+
+tmp <- xgb_final_fit %>% collect_predictions() %>% select(.pred_class)
+tmp <- as.numeric(tmp$.pred_class) -1
+Combined$GBMPredictions <- tmp
+
+
+#write.csv(Combined, "test_comparison.csv", row.names = FALSE)
+
+
+
+
+
+```
+
+
+
+```{r}
+library(caret)
+library(CustomerScoringMetrics)
+Combined <- read.csv("test_comparison.csv", stringsAsFactors = F)
+library(pROC)
+
+## Lasso
+confusionMatrix(factor(Combined$EPS_Movement), factor(Combined$LassoPredictions))
+accuracy(Combined, factor(EPS_Movement), factor(LassoPredictions))
+ROC <- roc(factor(Combined$EPS_Movement), Combined$LassoPredictions)
+ROC$auc
+
+gain_curve(Combined, truth = factor(EPS_Movement), estimate = Lasso) %>% autoplot() 
+
+## RF
+confusionMatrix(factor(Combined$EPS_Movement), factor(Combined$RFPredictions))
+accuracy(Combined, factor(EPS_Movement), factor(RFPredictions))
+ROC <- roc(factor(Combined$EPS_Movement), Combined$RFPredictions)
+ROC$auc
+
+gain_curve(Combined, truth = factor(EPS_Movement), estimate = RF) %>% autoplot()
+
+## GBM
+confusionMatrix(factor(Combined$EPS_Movement), factor(Combined$GBMPredictions))
+accuracy(Combined, factor(EPS_Movement), factor(GBMPredictions))
+ROC <- roc(factor(Combined$EPS_Movement), Combined$GBMPredictions)
+ROC$auc
+
+gain_curve(Combined, truth = factor(EPS_Movement), estimate = GBM) %>% autoplot()
+
+## IBES
+confusionMatrix(factor(Combined$EPS_Movement), factor(Combined$MoveIBES))
+accuracy(Combined, factor(EPS_Movement), factor(MoveIBES))
+ROC <- roc(factor(Combined$EPS_Movement), Combined$MoveIBES)
+ROC$auc
+```
+
+
+```{r}
+#Lasso + industry
+Combined$Industry <- ifelse(Combined$Industry == "Agriculture, forestry and fishing" | is.na(Combined$Industry), "Other", Combined$Industry)
+
+accuracy(Combined[Combined$Industry == "Manufacturing",], factor(EPS_Movement), factor(LassoPredictions))
+nrow(Combined[Combined$Industry == "Manufacturing",])
+
+accuracy(Combined[Combined$Industry == "Transportation, communication and utilities",], factor(EPS_Movement), factor(LassoPredictions))
+nrow(Combined[Combined$Industry == "Transportation, communication and utilities",])
+
+accuracy(Combined[Combined$Industry == "Wholesale and retail trade",], factor(EPS_Movement), factor(LassoPredictions))
+nrow(Combined[Combined$Industry == "Wholesale and retail trade",])
+
+accuracy(Combined[Combined$Industry == "Services",], factor(EPS_Movement), factor(LassoPredictions))
+nrow(Combined[Combined$Industry == "Services",])
+
+accuracy(Combined[Combined$Industry == "Mining",], factor(EPS_Movement), factor(LassoPredictions))
+nrow(Combined[Combined$Industry == "Mining",])
+
+accuracy(Combined[Combined$Industry == "Construction",], factor(EPS_Movement), factor(LassoPredictions))
+nrow(Combined[Combined$Industry == "Construction",])
+
+accuracy(Combined[Combined$Industry == "Other",], factor(EPS_Movement), factor(LassoPredictions))
+nrow(Combined[Combined$Industry == "Other",])
+
+Combined$Industry <- ifelse(Combined$Industry == "Agriculture, forestry and fishing" | is.na(Combined$Industry), "Other", Combined$Industry)
+
+## RF industry
+accuracy(Combined[Combined$Industry == "Manufacturing",], factor(EPS_Movement), factor(RFPredictions))
+nrow(Combined[Combined$Industry == "Manufacturing",])
+
+accuracy(Combined[Combined$Industry == "Transportation, communication and utilities",], factor(EPS_Movement), factor(RFPredictions))
+nrow(Combined[Combined$Industry == "Transportation, communication and utilities",])
+
+accuracy(Combined[Combined$Industry == "Wholesale and retail trade",], factor(EPS_Movement), factor(RFPredictions))
+nrow(Combined[Combined$Industry == "Wholesale and retail trade",])
+
+accuracy(Combined[Combined$Industry == "Services",], factor(EPS_Movement), factor(RFPredictions))
+nrow(Combined[Combined$Industry == "Services",])
+
+accuracy(Combined[Combined$Industry == "Mining",], factor(EPS_Movement), factor(RFPredictions))
+nrow(Combined[Combined$Industry == "Mining",])
+
+accuracy(Combined[Combined$Industry == "Construction",], factor(EPS_Movement), factor(RFPredictions))
+nrow(Combined[Combined$Industry == "Construction",])
+
+accuracy(Combined[Combined$Industry == "Other",], factor(EPS_Movement), factor(RFPredictions))
+nrow(Combined[Combined$Industry == "Other",])
+
+
+
+## GBM industry
+accuracy(Combined[Combined$Industry == "Manufacturing",], factor(EPS_Movement), factor(GBMPredictions))
+nrow(Combined[Combined$Industry == "Manufacturing",])
+
+accuracy(Combined[Combined$Industry == "Transportation, communication and utilities",], factor(EPS_Movement), factor(GBMPredictions))
+nrow(Combined[Combined$Industry == "Transportation, communication and utilities",])
+
+accuracy(Combined[Combined$Industry == "Wholesale and retail trade",], factor(EPS_Movement), factor(GBMPredictions))
+nrow(Combined[Combined$Industry == "Wholesale and retail trade",])
+
+accuracy(Combined[Combined$Industry == "Services",], factor(EPS_Movement), factor(GBMPredictions))
+nrow(Combined[Combined$Industry == "Services",])
+
+accuracy(Combined[Combined$Industry == "Mining",], factor(EPS_Movement), factor(GBMPredictions))
+nrow(Combined[Combined$Industry == "Mining",])
+
+accuracy(Combined[Combined$Industry == "Construction",], factor(EPS_Movement), factor(GBMPredictions))
+nrow(Combined[Combined$Industry == "Construction",])
+
+accuracy(Combined[Combined$Industry == "Other",], factor(EPS_Movement), factor(GBMPredictions))
+nrow(Combined[Combined$Industry == "Other",])
+
+
+## IBES industry
+accuracy(Combined[Combined$Industry == "Manufacturing",], factor(EPS_Movement), factor(MoveIBES))
+nrow(Combined[Combined$Industry == "Manufacturing",])
+
+accuracy(Combined[Combined$Industry == "Transportation, communication and utilities",], factor(EPS_Movement), factor(MoveIBES))
+nrow(Combined[Combined$Industry == "Transportation, communication and utilities",])
+
+accuracy(Combined[Combined$Industry == "Wholesale and retail trade",], factor(EPS_Movement), factor(MoveIBES))
+nrow(Combined[Combined$Industry == "Wholesale and retail trade",])
+
+accuracy(Combined[Combined$Industry == "Services",], factor(EPS_Movement), factor(MoveIBES))
+nrow(Combined[Combined$Industry == "Services",])
+
+accuracy(Combined[Combined$Industry == "Mining",], factor(EPS_Movement), factor(MoveIBES))
+nrow(Combined[Combined$Industry == "Mining",])
+
+accuracy(Combined[Combined$Industry == "Construction",], factor(EPS_Movement), factor(MoveIBES))
+nrow(Combined[Combined$Industry == "Construction",])
+
+accuracy(Combined[Combined$Industry == "Other",], factor(EPS_Movement), factor(MoveIBES))
+nrow(Combined[Combined$Industry == "Other",])
+
+#Lasso + year
+
+accuracy(Combined[Combined$Year == "2012",], factor(EPS_Movement), factor(LassoPredictions))
+nrow(Combined[Combined$Year== "2012",])
+
+accuracy(Combined[Combined$Year == "2013",], factor(EPS_Movement), factor(LassoPredictions))
+nrow(Combined[Combined$Year== "2013",])
+
+accuracy(Combined[Combined$Year == "2014",], factor(EPS_Movement), factor(LassoPredictions))
+nrow(Combined[Combined$Year == "2014",])
+
+accuracy(Combined[Combined$Year == "2015",], factor(EPS_Movement), factor(LassoPredictions))
+nrow(Combined[Combined$Year == "2015",])
+
+accuracy(Combined[Combined$Year == "2016",], factor(EPS_Movement), factor(LassoPredictions))
+nrow(Combined[Combined$Year == "2016",])
+
+accuracy(Combined[Combined$Year == "2017",], factor(EPS_Movement), factor(LassoPredictions))
+nrow(Combined[Combined$Year == "2017",])
+
+accuracy(Combined[Combined$Year == "2018",], factor(EPS_Movement), factor(LassoPredictions))
+nrow(Combined[Combined$Year == "2018",])
+
+accuracy(Combined[Combined$Year == "2019",], factor(EPS_Movement), factor(LassoPredictions))
+nrow(Combined[Combined$Year == "2019",])
+
+## RF year
+accuracy(Combined[Combined$Year == "2012",], factor(EPS_Movement), factor(RFPredictions))
+nrow(Combined[Combined$Year== "2012",])
+
+accuracy(Combined[Combined$Year == "2013",], factor(EPS_Movement), factor(RFPredictions))
+nrow(Combined[Combined$Year== "2013",])
+
+accuracy(Combined[Combined$Year == "2014",], factor(EPS_Movement), factor(RFPredictions))
+nrow(Combined[Combined$Year == "2014",])
+
+accuracy(Combined[Combined$Year == "2015",], factor(EPS_Movement), factor(RFPredictions))
+nrow(Combined[Combined$Year == "2015",])
+
+accuracy(Combined[Combined$Year == "2016",], factor(EPS_Movement), factor(RFPredictions))
+nrow(Combined[Combined$Year == "2016",])
+
+accuracy(Combined[Combined$Year == "2017",], factor(EPS_Movement), factor(RFPredictions))
+nrow(Combined[Combined$Year == "2017",])
+
+accuracy(Combined[Combined$Year == "2018",], factor(EPS_Movement), factor(RFPredictions))
+nrow(Combined[Combined$Year == "2018",])
+
+accuracy(Combined[Combined$Year == "2019",], factor(EPS_Movement), factor(RFPredictions))
+nrow(Combined[Combined$Year == "2019",])
+
+
+
+## GBM year
+accuracy(Combined[Combined$Year == "2012",], factor(EPS_Movement), factor(GBMPredictions))
+nrow(Combined[Combined$Year== "2012",])
+
+accuracy(Combined[Combined$Year == "2013",], factor(EPS_Movement), factor(GBMPredictions))
+nrow(Combined[Combined$Year== "2013",])
+
+accuracy(Combined[Combined$Year == "2014",], factor(EPS_Movement), factor(GBMPredictions))
+nrow(Combined[Combined$Year == "2014",])
+
+accuracy(Combined[Combined$Year == "2015",], factor(EPS_Movement), factor(GBMPredictions))
+nrow(Combined[Combined$Year == "2015",])
+
+accuracy(Combined[Combined$Year == "2016",], factor(EPS_Movement), factor(GBMPredictions))
+nrow(Combined[Combined$Year == "2016",])
+
+accuracy(Combined[Combined$Year == "2017",], factor(EPS_Movement), factor(GBMPredictions))
+nrow(Combined[Combined$Year == "2017",])
+
+accuracy(Combined[Combined$Year == "2018",], factor(EPS_Movement), factor(GBMPredictions))
+nrow(Combined[Combined$Year == "2018",])
+
+accuracy(Combined[Combined$Year == "2019",], factor(EPS_Movement), factor(GBMPredictions))
+nrow(Combined[Combined$Year == "2019",])
+
+
+## IBES year
+accuracy(Combined[Combined$Year == "2012",], factor(EPS_Movement), factor(MoveIBES))
+nrow(Combined[Combined$Year== "2012",])
+
+accuracy(Combined[Combined$Year == "2013",], factor(EPS_Movement), factor(MoveIBES))
+nrow(Combined[Combined$Year== "2013",])
+
+accuracy(Combined[Combined$Year == "2014",], factor(EPS_Movement), factor(MoveIBES))
+nrow(Combined[Combined$Year == "2014",])
+
+accuracy(Combined[Combined$Year == "2015",], factor(EPS_Movement), factor(MoveIBES))
+nrow(Combined[Combined$Year == "2015",])
+
+accuracy(Combined[Combined$Year == "2016",], factor(EPS_Movement), factor(MoveIBES))
+nrow(Combined[Combined$Year == "2016",])
+
+accuracy(Combined[Combined$Year == "2017",], factor(EPS_Movement), factor(MoveIBES))
+nrow(Combined[Combined$Year == "2017",])
+
+accuracy(Combined[Combined$Year == "2018",], factor(EPS_Movement), factor(MoveIBES))
+nrow(Combined[Combined$Year == "2018",])
+
+accuracy(Combined[Combined$Year == "2019",], factor(EPS_Movement), factor(MoveIBES))
+nrow(Combined[Combined$Year == "2019",])
+
+
+#Lasso + Size
+
+accuracy(Combined[Combined$Size == "<10M",], factor(EPS_Movement), factor(LassoPredictions))
+nrow(Combined[Combined$Size== "<10M",])
+
+accuracy(Combined[Combined$Size == "10M-50M",], factor(EPS_Movement), factor(LassoPredictions))
+nrow(Combined[Combined$Size== "10M-50M",])
+
+accuracy(Combined[Combined$Size == "50M-200M",], factor(EPS_Movement), factor(LassoPredictions))
+nrow(Combined[Combined$Size == "50M-200M",])
+
+accuracy(Combined[Combined$Size == "200M-500M",], factor(EPS_Movement), factor(LassoPredictions))
+nrow(Combined[Combined$Size == "200M-500M",])
+
+accuracy(Combined[Combined$Size == "500M-1B",], factor(EPS_Movement), factor(LassoPredictions))
+nrow(Combined[Combined$Size == "500M-1B",])
+
+accuracy(Combined[Combined$Size == "1B-2B",], factor(EPS_Movement), factor(LassoPredictions))
+nrow(Combined[Combined$Size == "1B-2B",])
+
+accuracy(Combined[Combined$Size == "2B-5B",], factor(EPS_Movement), factor(LassoPredictions))
+nrow(Combined[Combined$Size == "2B-5B",])
+
+accuracy(Combined[Combined$Size == "5B-10B",], factor(EPS_Movement), factor(LassoPredictions))
+nrow(Combined[Combined$Size == "5B-10B",])
+
+accuracy(Combined[Combined$Size == ">10B",], factor(EPS_Movement), factor(LassoPredictions))
+nrow(Combined[Combined$Size == ">10B",])
+
+#RF + Size
+
+accuracy(Combined[Combined$Size == "<10M",], factor(EPS_Movement), factor(RFPredictions))
+nrow(Combined[Combined$Size== "<10M",])
+
+accuracy(Combined[Combined$Size == "10M-50M",], factor(EPS_Movement), factor(RFPredictions))
+nrow(Combined[Combined$Size== "10M-50M",])
+
+accuracy(Combined[Combined$Size == "50M-200M",], factor(EPS_Movement), factor(RFPredictions))
+nrow(Combined[Combined$Size == "50M-200M",])
+
+accuracy(Combined[Combined$Size == "200M-500M",], factor(EPS_Movement), factor(RFPredictions))
+nrow(Combined[Combined$Size == "200M-500M",])
+
+accuracy(Combined[Combined$Size == "500M-1B",], factor(EPS_Movement), factor(RFPredictions))
+nrow(Combined[Combined$Size == "500M-1B",])
+
+accuracy(Combined[Combined$Size == "1B-2B",], factor(EPS_Movement), factor(RFPredictions))
+nrow(Combined[Combined$Size == "1B-2B",])
+
+accuracy(Combined[Combined$Size == "2B-5B",], factor(EPS_Movement), factor(RFPredictions))
+nrow(Combined[Combined$Size == "2B-5B",])
+
+accuracy(Combined[Combined$Size == "5B-10B",], factor(EPS_Movement), factor(RFPredictions))
+nrow(Combined[Combined$Size == "5B-10B",])
+
+accuracy(Combined[Combined$Size == ">10B",], factor(EPS_Movement), factor(RFPredictions))
+nrow(Combined[Combined$Size == ">10B",])
+
+#GBM + Size
+
+accuracy(Combined[Combined$Size == "<10M",], factor(EPS_Movement), factor(GBMPredictions))
+nrow(Combined[Combined$Size== "<10M",])
+
+accuracy(Combined[Combined$Size == "10M-50M",], factor(EPS_Movement), factor(GBMPredictions))
+nrow(Combined[Combined$Size== "10M-50M",])
+
+accuracy(Combined[Combined$Size == "50M-200M",], factor(EPS_Movement), factor(GBMPredictions))
+nrow(Combined[Combined$Size == "50M-200M",])
+
+accuracy(Combined[Combined$Size == "200M-500M",], factor(EPS_Movement), factor(GBMPredictions))
+nrow(Combined[Combined$Size == "200M-500M",])
+
+accuracy(Combined[Combined$Size == "500M-1B",], factor(EPS_Movement), factor(GBMPredictions))
+nrow(Combined[Combined$Size == "500M-1B",])
+
+accuracy(Combined[Combined$Size == "1B-2B",], factor(EPS_Movement), factor(GBMPredictions))
+nrow(Combined[Combined$Size == "1B-2B",])
+
+accuracy(Combined[Combined$Size == "2B-5B",], factor(EPS_Movement), factor(GBMPredictions))
+nrow(Combined[Combined$Size == "2B-5B",])
+
+accuracy(Combined[Combined$Size == "5B-10B",], factor(EPS_Movement), factor(GBMPredictions))
+nrow(Combined[Combined$Size == "5B-10B",])
+
+accuracy(Combined[Combined$Size == ">10B",], factor(EPS_Movement), factor(GBMPredictions))
+nrow(Combined[Combined$Size == ">10B",])
+
+#IBES + Size
+
+accuracy(Combined[Combined$Size == "<10M",], factor(EPS_Movement), factor(MoveIBES))
+nrow(Combined[Combined$Size== "<10M",])
+
+accuracy(Combined[Combined$Size == "10M-50M",], factor(EPS_Movement), factor(MoveIBES))
+nrow(Combined[Combined$Size== "10M-50M",])
+
+accuracy(Combined[Combined$Size == "50M-200M",], factor(EPS_Movement), factor(MoveIBES))
+nrow(Combined[Combined$Size == "50M-200M",])
+
+accuracy(Combined[Combined$Size == "200M-500M",], factor(EPS_Movement), factor(MoveIBES))
+nrow(Combined[Combined$Size == "200M-500M",])
+
+accuracy(Combined[Combined$Size == "500M-1B",], factor(EPS_Movement), factor(MoveIBES))
+nrow(Combined[Combined$Size == "500M-1B",])
+
+accuracy(Combined[Combined$Size == "1B-2B",], factor(EPS_Movement), factor(MoveIBES))
+nrow(Combined[Combined$Size == "1B-2B",])
+
+accuracy(Combined[Combined$Size == "2B-5B",], factor(EPS_Movement), factor(MoveIBES))
+nrow(Combined[Combined$Size == "2B-5B",])
+
+accuracy(Combined[Combined$Size == "5B-10B",], factor(EPS_Movement), factor(MoveIBES))
+nrow(Combined[Combined$Size == "5B-10B",])
+
+accuracy(Combined[Combined$Size == ">10B",], factor(EPS_Movement), factor(MoveIBES))
+nrow(Combined[Combined$Size == ">10B",])
+```
+
