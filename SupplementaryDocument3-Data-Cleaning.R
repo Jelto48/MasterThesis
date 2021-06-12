@@ -1,5 +1,7 @@
 ## Third supplementary coding document used to prepare the XBRL data for machine learning purposes
 
+library(dplyr)
+
 ## The downsized raw output data from the scraping algorithm is loaded first
 Complete <- read.csv("OutputScraping.csv")
 
@@ -55,12 +57,12 @@ Complete <- Complete %>% arrange(.,by = c(Ticker))
 
 ## Next, companies with 3 subsequent years of data need to be obtained. 
 ## This has been classified by grouping the observations based on ticker and reporting 
-## year and creating an indicator variable for these observations. The value ‘last’ is 
+## year and creating an indicator variable for these observations. The value 'last' is 
 ## assigned if the previous observation does not share the same ticker, the next 
 ## observation shares the same ticker and the next observation contains the annual 
-## reporting data from the previous year.  The value ‘middle’ is assigned if both the 
+## reporting data from the previous year.  The value 'middle' is assigned if both the 
 ## previous and the next observation share the same ticker, and the reporting year is the 
-## year in between the previous and the next observation. The ‘first’ value shows if an 
+## year in between the previous and the next observation. The 'first' value shows if an 
 ## observation is the first of a block of three at minimum, and is assigned when it is one 
 ## year before the previous observation and shares the same ticker, but does not share the 
 ## ticker with the next observation.
@@ -85,7 +87,8 @@ Complete$Indicator <- New$Indicator
 ## Filter out unclassified observations and observations with many missing values
 Complete <- Complete[Complete$Indicator != "No",]
 Complete <- Complete[rowSums(is.na(Complete))<8973,]
-Complete <- Complete[,colSums(is.na(Complete))<29000]
+Complete <- Complete[,colSums(is.na(Complete))<2578]
+Complete <- Complete[,c(1:889,900)]
 Complete[is.na(Complete)] <- 0 
 
 ## The dataset is then ready to calculate lagged and percentage change variables
@@ -114,6 +117,7 @@ colnames(Delta) <- paste0("Delta_", colnames(Delta))
 
 Complete2 <- cbind(Complete2, Delta)
 Complete3 <- Complete2
+rm(Complete2)
 
 ## Winsorise columns at a 1% level
 library(DescTools)
@@ -121,5 +125,37 @@ for(i in c(5:889,891:2660)){
   Complete3[,i] <- Winsorize(Complete3[,i], na.rm=TRUE) 
 }
 
-## Save dataset that will be used for the machine learning steps
-#write.csv(Complete3, "MlDataset.csv", row.names = F)
+## Obtain actual earnings per share from Compustat data
+COMP <- read.csv("Compustat_match.csv")
+COMP <- COMP %>% group_by(fyear,tic) %>% summarise(EPS = mean(epspi))
+Complete3 <- left_join(Complete3,COMP, by = c("Ticker" = "tic", "Year" = "fyear"))
+Complete3$us.gaap_EarningsPerShareBasic <- ifelse(Complete3$us.gaap_EarningsPerShareBasic == 0 & !is.na(Complete3$EPS), Complete3$EPS, Complete3$us.gaap_EarningsPerShareBasic) 
+
+## Calculate one year EPS up or down move
+Complete3$OneYearForwardEPS <- NA
+for(i in 1:nrow(Complete3)){
+  if(Complete3$Indicator[i] == "Middle"){
+    Complete3$OneYearForwardEPS[i] <- Complete3$us.gaap_EarningsPerShareBasic[i-1]
+  }
+}
+
+## Only take into account observations that show to have a previous and a future year available
+MlDataset <- Complete3[Complete3$Indicator == "Middle",]
+rm(Complete3)
+
+## Adjust date variable
+MlDataset$endDate <- as.character(as.Date(as.character(MlDataset$endDate),format="%Y-%m-%d"))
+
+## Create earnings per share movement dependent variable by looking at the up or down move of EPS
+MlDataset$OneYearForwardEPS <- Winsorize(MlDataset$OneYearForwardEPS, na.rm=TRUE) 
+MlDataset$EPS_Movement <- as.factor(ifelse((MlDataset$OneYearForwardEPS - MlDataset$us.gaap_EarningsPerShareBasic)>0, 1,0))
+MlDataset <- MlDataset %>% select(-Indicator, -EPS)
+
+## Filter and save final output file
+MlDataset[is.na(MlDataset)] <- 0
+MlDataset[is.nan(MlDataset)] <- 0
+MlDataset <- MlDataset[,colSums(MlDataset == 0)<15300]
+#write.csv(MlDataset, "MlDataset.csv", row.names = F)
+
+
+
