@@ -1,0 +1,198 @@
+---
+title: "Supplementary Doc 4"
+author: "Jelto de Jong"
+date: "12/06/2021"
+output: html_notebook
+---
+
+## Fourth supplementary coding document used to build and tune the machine learning models for the business analytics and management master thesis of Jelto de Jong 
+
+First, the final dataset used for the machine learning part is loaded
+```{r}
+MlDataset <- read.csv("MlDataset.csv")
+MlDataset$EPS_Movement <- as.factor(MlDataset$EPS_Movement)
+```
+
+A train test split is first created with an 80-20 distinction
+```{r message=FALSE, warning=FALSE}
+library(tidymodels)
+library(dplyr)
+
+set.seed(12)
+model_split <- initial_split(MlDataset, prop = 0.8, strata = EPS_Movement)
+```
+
+
+The train and test set are then specified and immediately, a 10-fold cross-validation set is defined that will be used to tune the models
+```{r}
+data_train <- training(model_split)
+data_test <- testing(model_split)
+
+set.seed(12)
+cv_folds <- vfold_cv(data_train, v = 10, strata = EPS_Movement)
+```
+
+## Lasso regression
+
+The first machine learning model that is set up is the lasso linear regression. The first step is to create the model recipe by using all the data and removing the description variables.
+```{r message=FALSE, warning=FALSE}
+library(glmnet)
+logreg_recipe <-  recipe(EPS_Movement ~ ., data = data_train)  %>%  step_rm(Year, endDate, Ticker, Publication, OneYearForwardEPS)
+```
+
+The model set up is then continued by making sure the shrinkage parameter will be tuned and a workflow is created with the specified recipe and model
+```{r message=FALSE, warning=FALSE}
+lasso_logreg <- logistic_reg(penalty = tune(), mixture = 1) %>% set_engine("glmnet")
+lasso_wf <- workflow() %>% 
+  add_recipe(logreg_recipe) %>% 
+  add_model(lasso_logreg)
+```
+
+To be able to tune the model, a tuning grid needs to be set up. This is done by creating a tuning grid with a range of 100 potential $\lambda$ values between 0.0001 and 0.1
+
+```{r}
+grid_lasso <- tibble(penalty = 10^(seq(from = -5, to = -1, length.out = 100)))
+```
+
+The metrics used to test the performance are then specified, followed by tuning the model to obtain the optimal shrinkage parameter
+```{r}
+class_metrics <- metric_set(accuracy, kap, roc_auc)
+lasso_tune <- lasso_wf %>% 
+  tune_grid(resamples = cv_folds, 
+            grid = grid_lasso,
+            metrics = class_metrics)
+```
+
+The training metrics can then be obtained and the tuning grid can then be visualised 
+```{r}
+lasso_tune_metrics <- lasso_tune %>% 
+  collect_metrics()
+lasso_tune_metrics %>% filter(.metric == "accuracy") %>% 
+  ggplot(aes(x = penalty, y = mean, 
+             ymin = mean - std_err, ymax = mean + std_err)) + 
+  geom_errorbar(alpha = 0.5) + 
+  geom_point() + 
+  scale_x_log10() + 
+  labs(y = "Accuracy", x = expression(lambda))
+```
+The best shrinkage parameter is then selected by looking at the parameter within one standard error of the best model to avoid shrinking the coefficients too much. As can be seen, the optimal parameter is 0.005
+```{r}
+lasso_1se_model <- select_by_one_std_err(lasso_tune, metric = "accuracy", desc(penalty))
+lasso_1se_model
+```
+
+The workflow is then finalised to be able to apply the model on the test set
+
+```{r}
+lasso_wf_tuned <- 
+  lasso_wf %>% 
+  finalize_workflow(lasso_1se_model)
+lasso_wf_tuned
+```
+
+The model is then applied on the test set and the corresponding error metrics have been obtained.
+
+```{r}
+lasso_last_fit <- lasso_wf_tuned %>% 
+  last_fit(model_split, metrics = class_metrics)
+```
+
+## Random Forests
+
+The second model that will be applied is the Random Forests model. 
+
+
+
+
+
+
+
+
+
+
+
+Lasso results:
+
+```{r}
+lasso_last_fit %>% collect_predictions() %>% select(.pred_class) 
+Lasso <- as.data.frame(lasso_last_fit$.predictions)
+conf_mat(Lasso, EPS_Movement, .pred_class)
+
+lasso_last_fit %>% collect_predictions() %>% 
+  gain_curve(EPS_Movement, .pred_0) %>% 
+  autoplot()
+```
+
+
+The performance on the test set for this model is:
+
+```{r}
+lasso_test_metrics <- lasso_last_fit %>% collect_metrics()
+lasso_test_metrics
+```
+```{r}
+library(vip)
+library(forcats)
+
+lasso_model_vi <- logistic_reg(penalty = lasso_1se_model$penalty) %>% set_engine("glmnet")
+lasso_wf_vi <- workflow() %>% 
+  add_recipe(logreg_recipe) %>% 
+  add_model(lasso_model_vi)
+
+
+set.seed(12)
+rf_vi_fit <- lasso_wf_vi %>% fit(data = data_test)
+rf_vi_fit %>% pull_workflow_fit() %>% vi()
+rf_vi_fit %>% pull_workflow_fit() %>% vip(geom = "point", num_features = 20)
+
+
+```
+
+
+
+
+
+
+
+```{r}
+ID <- read.csv("Identifying.csv")
+colnames(ID) <- c("Ticker", "Sic", "Remove")
+SUMMARY <- left_join(MlDataset, ID, by = ("Ticker" = "Ticker"))
+SUMMARY <- SUMMARY %>% select(Ticker, Year, us.gaap_Assets, Sic, EPS_Movement)
+
+Summary <- SUMMARY %>% group_by(Year) %>%  summarise(n = n())
+Summary[4:11,]
+
+options("scipen"=100, "digits"=4)
+
+Summary <- SUMMARY %>% group_by(Year) %>%  summarise(n = n())
+Summary[3:10,]
+
+SUMMARY$Size <- ifelse(SUMMARY$us.gaap_Assets<10000000, "<10M",
+ifelse(SUMMARY$us.gaap_Assets>10000000 & SUMMARY$us.gaap_Assets<50000000,"10M-50M",
+ifelse(SUMMARY$us.gaap_Assets>50000000 & SUMMARY$us.gaap_Assets<200000000,"50M-200M",
+ifelse(SUMMARY$us.gaap_Assets>200000000 & SUMMARY$us.gaap_Assets<500000000,"200M-500M",
+ifelse(SUMMARY$us.gaap_Assets>500000000 & SUMMARY$us.gaap_Assets<1000000000,"500M-1B",
+ifelse(SUMMARY$us.gaap_Assets>1000000000 & SUMMARY$us.gaap_Assets<2000000000,"1B-2B",
+ifelse(SUMMARY$us.gaap_Assets>2000000000 & SUMMARY$us.gaap_Assets<5000000000,"2B-5B",
+ifelse(SUMMARY$us.gaap_Assets>5000000000 & SUMMARY$us.gaap_Assets<10000000000,"5B-10B",
+ifelse(SUMMARY$us.gaap_Assets>10000000000,">10B","")))))))))
+
+  
+Summary <- SUMMARY %>% group_by(Size) %>%  summarise(n = n())
+Summary[4:11,]
+
+SUMMARY$Industry <- ifelse(SUMMARY$Sic <1000, "Agriculture, forestry and fishing",
+ifelse(SUMMARY$Sic>=1000 & SUMMARY$Sic<1500,"Mining",
+ifelse(SUMMARY$Sic>=1500 & SUMMARY$Sic<1800,"Construction",
+ifelse(SUMMARY$Sic>=2000 & SUMMARY$Sic<4000,"Manufacturing",
+ifelse(SUMMARY$Sic>=4000 & SUMMARY$Sic<5000,"Transportation, communication and utilities",
+ifelse(SUMMARY$Sic>=5000 & SUMMARY$Sic<6000,"Wholesale and retail trade",
+ifelse(SUMMARY$Sic>=7000 & SUMMARY$Sic<9000,"Services",
+ifelse(SUMMARY$Sic>=9000 & SUMMARY$Sic<10000,"Public administration",""))))))))
+
+
+Summary <- SUMMARY %>% group_by(Industry) %>%  summarise(n = n())
+
+Summary
+```
