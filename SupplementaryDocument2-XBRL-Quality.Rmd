@@ -5,7 +5,7 @@ date: "12/06/2021"
 output: html_notebook
 ---
 
-## Second supplementary coding document used to scrape the XBRL data used for te business analytics and management master thesis of Jelto de Jong
+## Second supplementary coding document used to scrape the XBRL data used for the business analytics and management master thesis of Jelto de Jong
 
 The reduced file obtained from the scraping algorithm is loaded first, followed by the loading of the Compustat comparison file that includes the available and linked variables. Some adjustments have been made to the data, after which the datasets are linked to eachother.
 
