@@ -97,40 +97,9 @@ lasso_last_fit <- lasso_wf_tuned %>%
   last_fit(model_split, metrics = class_metrics)
 ```
 
-## Random Forests
+The variable importance can be shown as follows
 
-The second model that will be applied is the Random Forests model. 
-
-
-
-
-
-
-
-
-
-
-
-Lasso results:
-
-```{r}
-lasso_last_fit %>% collect_predictions() %>% select(.pred_class) 
-Lasso <- as.data.frame(lasso_last_fit$.predictions)
-conf_mat(Lasso, EPS_Movement, .pred_class)
-
-lasso_last_fit %>% collect_predictions() %>% 
-  gain_curve(EPS_Movement, .pred_0) %>% 
-  autoplot()
-```
-
-
-The performance on the test set for this model is:
-
-```{r}
-lasso_test_metrics <- lasso_last_fit %>% collect_metrics()
-lasso_test_metrics
-```
-```{r}
+```{r message=FALSE, warning=FALSE}
 library(vip)
 library(forcats)
 
@@ -142,57 +111,275 @@ lasso_wf_vi <- workflow() %>%
 
 set.seed(12)
 rf_vi_fit <- lasso_wf_vi %>% fit(data = data_test)
-rf_vi_fit %>% pull_workflow_fit() %>% vi()
 rf_vi_fit %>% pull_workflow_fit() %>% vip(geom = "point", num_features = 20)
+```
 
 
+## Random Forests
+
+The second model that will be applied is the Random Forests model. First of all, a recipe is created that show what dependent and independent variables have been used in the model
+```{r message=FALSE, warning=FALSE}
+library("ranger")
+library("doParallel")
+
+rf_recipe <- recipe(EPS_Movement ~ ., data = data_train) %>% step_rm(Year, endDate, Ticker, Publication, OneYearForwardEPS)
+```
+
+
+A tuning model is then created that shows that the number of randomly drawn model features for a tree split within the model will be tuned, and that 5000 trees will be grown and averaged.
+```{r}
+rf_model_tune <- rand_forest(mtry = tune(), trees = 500) %>%
+  set_mode("classification") %>%
+  set_engine("ranger")
+```
+
+A workflow is then created that combines the recipe and the tuning specifications.
+```{r}
+rf_tune_wf <- workflow() %>%
+  add_recipe(rf_recipe) %>%
+  add_model(rf_model_tune)
+rf_tune_wf
+```
+
+After specifying the used metrics, the system is requested to run parallel models and the model is tuned
+```{r}
+class_metrics <- metric_set(accuracy, kap,  roc_auc)
+
+registerDoParallel()
+set.seed(12)
+rf_tune_res <- tune_grid(
+  rf_tune_wf,
+  resamples = cv_folds,
+  grid = tibble(mtry = c(63:65)),
+  metrics = class_metrics
+)
+```
+
+The tuning metrics are then obtained and it is shown that an mtry of 65 results in the best accuracy
+```{r}
+rf_tune_res %>%
+  collect_metrics()
+
+rf_tune_res %>%
+  collect_metrics() %>%
+  filter(.metric %in% c("roc_auc", "accuracy", "kap")) %>%
+  ggplot(aes(x = mtry, y = mean, ymin = mean - std_err, ymax = mean + std_err, 
+             colour = .metric)) +
+  geom_errorbar() + 
+  geom_line() +
+  geom_point() +
+  facet_grid(.metric ~ ., scales = "free_y")
+```
+
+
+This is then stored and the workflow is finalised and applied on the test set
+```{r}
+best_acc <- select_best(rf_tune_res, "roc_auc")
+rf_final_wf <- finalize_workflow(rf_tune_wf, best_acc)
+rf_final_wf
+
+set.seed(12)
+rf_final_fit <- rf_final_wf %>%
+  last_fit(model_split, metrics = class_metrics)
+```
+
+The variable importance can be shown as follows
+```{r}
+rf_model_vi <- rand_forest(mtry = 65, trees = 5000) %>%
+  set_mode("classification") %>%
+  set_engine("ranger", importance = "permutation")
+rf_vi_wf <- workflow() %>% 
+  add_model(rf_model_vi) %>% 
+  add_recipe(rf_recipe)
+
+set.seed(12)
+rf_vi_fit <- rf_vi_wf %>% fit(data = data_train)
+rf_vi_fit %>% pull_workflow_fit() %>% vip(geom = "point", num_features = 20)
 ```
 
 
 
+## Gradient Boosting Machines
+
+The final machine learning model that is applied is the Gradient Boosting Machine algorithm.
+```{r message=FALSE, warning=FALSE}
+library("tidymodels")
+library("doParallel")
+library("themis")
+library("xgboost")
+```
+
+First of all, the recipe is created where the variables in the model have been specified
+```{r}
+xgb_recipe <- recipe(EPS_Movement ~ ., data = data_train) %>% step_rm(Year, endDate, Ticker, Publication, OneYearForwardEPS)
+```
+
+The tuning model is then created where all parameters except for the stop parameter will be tuned
+```{r}
+xgb_model_tune <- 
+  boost_tree(trees = tune(), tree_depth = tune(), 
+             learn_rate = tune(), stop_iter = 1000) %>%
+  set_mode("classification") %>%
+  set_engine("xgboost")
+```
+
+The workflow can then be created where the recipe and the model specifications have been combined
+```{r}
+xgb_tune_wf <- workflow() %>%
+  add_recipe(xgb_recipe) %>%
+  add_model(xgb_model_tune)
+xgb_tune_wf
+```
+
+The tuning grid is then created showing the amount of trees, learning rate and tree depth
+
+```{r}
+xgb_grid <- expand.grid(trees = 500 * 2:3, 
+                        learn_rate = c(0.1, 0.03), 
+                        tree_depth = 2:3)
+```
 
 
+The model is then tuned after defining the class metrics
+```{r}
+class_metrics <- metric_set(accuracy, kap,  roc_auc)
+
+registerDoParallel()
+set.seed(12)
+
+xgb_tune_res <- tune_grid(
+  xgb_tune_wf,
+  resamples = cv_folds,
+  grid = xgb_grid,
+  metrics = class_metrics
+)
+```
+
+These metrics are then obtained and based on the best acurracy, the final parameter combination has been chosen
+```{r}
+xgb_tune_metrics <- xgb_tune_res %>%
+  collect_metrics()
+
+xgb_tune_metrics %>% 
+  filter(.metric == "accuracy") %>% 
+  ggplot(aes(x = trees, y = mean, 
+             colour = factor(tree_depth))) +
+  geom_path() +
+  labs(y = "Accuracy") + 
+  facet_wrap(~ learn_rate)
+```
+
+These parameters have then been specified in the final model
+```{r}
+xgb_best <- xgb_tune_metrics %>% 
+  filter(.metric == "accuracy", tree_depth == 2, learn_rate == 0.03, trees == 1500)
+xgb_final_wf <- finalize_workflow(xgb_tune_wf, xgb_best)
+xgb_final_wf
+```
+
+This model is then applied on the test set to obtain the final results
+```{r}
+xgb_final_fit <- xgb_final_wf %>%
+  last_fit(model_split, metrics = class_metrics)
+```
+
+
+The variable importance can be shown as follows
+
+```{r}
+xgb_model_vi <-  boost_tree(trees = 1500, tree_depth = 2, 
+             learn_rate = 0.03, stop_iter = 1000) %>%
+  set_mode("classification") %>%
+  set_engine("xgboost", importance = "permutation")
+
+xgb_vi_wf <- workflow() %>% 
+  add_model(xgb_model_vi) %>% 
+  add_recipe(xgb_recipe)
+
+set.seed(12)
+xgb_vi_fit <- xgb_vi_wf %>% fit(data = data_train)
+xgb_vi_fit %>% pull_workflow_fit() %>% vip(geom = "point", num_features = 9)
+
+```
+
+A final prediction model that will be used are the earnings movement predictions obtained from IBES, which has been cleaned and made comparable by using the following code
+
+```{r}
+IBES <- read.csv("IBES-Forecasts2.csv")
+
+IBES$Fiscal_Year_End  <- as.character(as.Date(as.character(IBES$Fiscal_Year_End ),format="%Y%m%d"))
+IBES$Prediction_Date  <- as.character(as.Date(as.character(IBES$Prediction_Date),format="%Y%m%d"))
+IBES$Announcement_Date <- as.character(as.Date(as.character(IBES$Announcement_Date),format="%Y%m%d"))
+IBES$Actual_Date <- as.character(as.Date(as.character(IBES$Actual_Date),format="%Y%m%d"))
+
+## Only take predictions fewer than 1 day away from report filing
+IBES$diff_in_days <- as.numeric(difftime(as.character(IBES$Prediction_Date), as.character(IBES$Announcement_Date), units = c("days")))
+
+IBES <- IBES[IBES$diff_in_days <= 1,]
+IBES_Match <- IBES %>% select(Ticker, Fiscal_Year_End, Predicted_EPS, Actual.EPS) %>% group_by(Ticker, Fiscal_Year_End) %>% summarise(mean_P_EPS = mean(Predicted_EPS, na.rm = T), mean_A_EPS = mean(Actual.EPS, na.rm = T))
+
+data_test2 <- testing(model_split)
+data_test2$endDate <- as.character(as.Date(as.character(data_test2$endDate),format="%d/%m/%Y"))
+Combined <- left_join(data_test2, IBES_Match, by = c("Ticker" = "Ticker", "endDate" = "Fiscal_Year_End"))
+Combined$MoveIBES <- ifelse(Combined$mean_P_EPS-Combined$mean_A_EPS>0,1,0)
+Combined$MoveIBES <- ifelse(is.na(Combined$MoveIBES), as.numeric(Combined$EPS_Movement)-1, Combined$MoveIBES)
+```
+
+
+Now that all models have been acquired/tuned and applied on the test set, a final output file can be created where the predictions are stored and that can be used to compare these predictions. This is first of all done by adding the year, size and sector features to a summary file
 
 
 ```{r}
 ID <- read.csv("Identifying.csv")
+
+## Create summary table used in data chapter
 colnames(ID) <- c("Ticker", "Sic", "Remove")
 SUMMARY <- left_join(MlDataset, ID, by = ("Ticker" = "Ticker"))
 SUMMARY <- SUMMARY %>% select(Ticker, Year, us.gaap_Assets, Sic, EPS_Movement)
-
-Summary <- SUMMARY %>% group_by(Year) %>%  summarise(n = n())
-Summary[4:11,]
-
-options("scipen"=100, "digits"=4)
-
-Summary <- SUMMARY %>% group_by(Year) %>%  summarise(n = n())
-Summary[3:10,]
-
-SUMMARY$Size <- ifelse(SUMMARY$us.gaap_Assets<10000000, "<10M",
-ifelse(SUMMARY$us.gaap_Assets>10000000 & SUMMARY$us.gaap_Assets<50000000,"10M-50M",
-ifelse(SUMMARY$us.gaap_Assets>50000000 & SUMMARY$us.gaap_Assets<200000000,"50M-200M",
-ifelse(SUMMARY$us.gaap_Assets>200000000 & SUMMARY$us.gaap_Assets<500000000,"200M-500M",
-ifelse(SUMMARY$us.gaap_Assets>500000000 & SUMMARY$us.gaap_Assets<1000000000,"500M-1B",
-ifelse(SUMMARY$us.gaap_Assets>1000000000 & SUMMARY$us.gaap_Assets<2000000000,"1B-2B",
-ifelse(SUMMARY$us.gaap_Assets>2000000000 & SUMMARY$us.gaap_Assets<5000000000,"2B-5B",
-ifelse(SUMMARY$us.gaap_Assets>5000000000 & SUMMARY$us.gaap_Assets<10000000000,"5B-10B",
-ifelse(SUMMARY$us.gaap_Assets>10000000000,">10B","")))))))))
-
-  
-Summary <- SUMMARY %>% group_by(Size) %>%  summarise(n = n())
-Summary[4:11,]
-
-SUMMARY$Industry <- ifelse(SUMMARY$Sic <1000, "Agriculture, forestry and fishing",
-ifelse(SUMMARY$Sic>=1000 & SUMMARY$Sic<1500,"Mining",
-ifelse(SUMMARY$Sic>=1500 & SUMMARY$Sic<1800,"Construction",
-ifelse(SUMMARY$Sic>=2000 & SUMMARY$Sic<4000,"Manufacturing",
-ifelse(SUMMARY$Sic>=4000 & SUMMARY$Sic<5000,"Transportation, communication and utilities",
-ifelse(SUMMARY$Sic>=5000 & SUMMARY$Sic<6000,"Wholesale and retail trade",
-ifelse(SUMMARY$Sic>=7000 & SUMMARY$Sic<9000,"Services",
-ifelse(SUMMARY$Sic>=9000 & SUMMARY$Sic<10000,"Public administration",""))))))))
-
-
-Summary <- SUMMARY %>% group_by(Industry) %>%  summarise(n = n())
-
-Summary
 ```
+
+Following this, the test set is stored and linked to the file with descriptive features 
+```{r}
+SUMMARY <- SUMMARY %>% distinct(Ticker, Sic)
+Combined <- left_join(Combined, SUMMARY, by = c("Ticker" = "Ticker"))
+
+Combined$Size <- ifelse(Combined$us.gaap_Assets<10000000, "<10M",
+ifelse(Combined$us.gaap_Assets>10000000 & Combined$us.gaap_Assets<50000000,"10M-50M",
+ifelse(Combined$us.gaap_Assets>50000000 & Combined$us.gaap_Assets<200000000,"50M-200M",
+ifelse(Combined$us.gaap_Assets>200000000 & Combined$us.gaap_Assets<500000000,"200M-500M",
+ifelse(Combined$us.gaap_Assets>500000000 & Combined$us.gaap_Assets<1000000000,"500M-1B",
+ifelse(Combined$us.gaap_Assets>1000000000 & Combined$us.gaap_Assets<2000000000,"1B-2B",
+ifelse(Combined$us.gaap_Assets>2000000000 & Combined$us.gaap_Assets<5000000000,"2B-5B",
+ifelse(Combined$us.gaap_Assets>5000000000 & Combined$us.gaap_Assets<10000000000,"5B-10B",
+ifelse(Combined$us.gaap_Assets>10000000000,">10B","")))))))))
+
+ 
+Combined$Industry <- ifelse(Combined$Sic <1000, "Agriculture, forestry and fishing",
+ifelse(Combined$Sic>=1000 & Combined$Sic<1500,"Mining",
+ifelse(Combined$Sic>=1500 & Combined$Sic<1800,"Construction",
+ifelse(Combined$Sic>=2000 & Combined$Sic<4000,"Manufacturing",
+ifelse(Combined$Sic>=4000 & Combined$Sic<5000,"Transportation, communication and utilities",
+ifelse(Combined$Sic>=5000 & Combined$Sic<6000,"Wholesale and retail trade",
+ifelse(Combined$Sic>=7000 & Combined$Sic<9000,"Services",
+ifelse(Combined$Sic>=9000 & Combined$Sic<10000,"Public administration",""))))))))
+```
+
+The predictions from the models on the test set are then stored, and will be used to compare the results
+```{r}
+tmp <- lasso_last_fit %>% collect_predictions() %>% select(.pred_class) 
+tmp <- as.numeric(tmp$.pred_class) -1
+Combined$LassoPredictions <- tmp
+
+tmp <- rf_final_fit %>% collect_predictions() %>% select(.pred_class)
+tmp <- as.numeric(tmp$.pred_class) -1
+Combined$RFPredictions <- tmp
+
+tmp <- xgb_final_fit %>% collect_predictions() %>% select(.pred_class)
+tmp <- as.numeric(tmp$.pred_class) -1
+Combined$GBMPredictions <- tmp
+
+Combined <- Combined %>% select(endDate, Ticker, Year, EPS_Movement, MoveIBES, Sic, Size, Industry, LassoPredictions, RFPredictions, GBMPredictions)
+
+#write.csv(Combined, "test_comparison.csv", row.names = FALSE)
+```
+
