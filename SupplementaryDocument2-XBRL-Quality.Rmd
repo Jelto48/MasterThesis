@@ -2,17 +2,14 @@
 title: "SupplementaryDocument2-DataQuality"
 author: "Jelto de Jong"
 date: "12/06/2021"
-output:
-  html_document: default
-  pdf_document: default
+output: html_notebook
 ---
 
-## Second supplementary coding document used to scrape the XBRL data used for te 
-## business analytics and management master thesis of Jelto de Jong
+## Second supplementary coding document used to scrape the XBRL data used for te business analytics and management master thesis of Jelto de Jong
 
 The reduced file obtained from the scraping algorithm is loaded first, followed by the loading of the Compustat comparison file that includes the available and linked variables. Some adjustments have been made to the data, after which the datasets are linked to eachother.
 
-```{r}
+```{r message=FALSE, warning=FALSE}
 Complete <- read.csv("OutputScraping.csv")
 
 library(dplyr)
@@ -105,7 +102,7 @@ library(ggplot2)
 library(scales)
 theme_set(theme_minimal())
 ggplot(Visual,aes(y = RMSPE,x = Year,color = Variable)) + 
-  geom_line() + theme(axis.text=element_text(size=14), legend.text=element_text(size=14)) +
+  geom_line() + theme(axis.text=element_text(size=12), legend.text=element_text(size=8)) +
   ggtitle("RMSPE XBRL vs Compustat Fundamentals")
 ```
 
@@ -113,7 +110,7 @@ This plot shows the move in average deviation
 ```{r}
 ggplot(Visual,aes(y = AverageDev,x = Year,color = Variable)) + 
   geom_line() + scale_y_continuous(labels = comma)+ 
-  geom_line() + theme(axis.text=element_text(size=14), legend.text=element_text(size=14))+
+  geom_line() + theme(axis.text=element_text(size=12), legend.text=element_text(size=8))+
   ggtitle("Average Deviation XBRL vs Compustat Fundamentals")
 ```
 
