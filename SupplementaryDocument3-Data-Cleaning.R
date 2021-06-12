@@ -155,6 +155,12 @@ MlDataset <- MlDataset %>% select(-Indicator, -EPS)
 MlDataset[is.na(MlDataset)] <- 0
 MlDataset[is.nan(MlDataset)] <- 0
 MlDataset <- MlDataset[,colSums(MlDataset == 0)<15300]
+
+## Remove tickers from financials and regulated utilities
+ID <- read.csv("Identifying.csv")
+ID2 <- ID[ID$Remove == 1,]
+ID2 <- as.character(ID2$ï..Ticker)
+MlDataset <- MlDataset[!MlDataset$Ticker %in% ID2,]
 #write.csv(MlDataset, "MlDataset.csv", row.names = F)
 
 
