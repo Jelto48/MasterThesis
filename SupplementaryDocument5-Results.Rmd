@@ -1,0 +1,254 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+In this fifth and final supplementary document, the results obtained from the algorithms will be compared, and some additional analyses will be provided.
+
+
+```{r message=FALSE, warning=FALSE}
+library(caret)
+library(CustomerScoringMetrics)
+Combined <- read.csv("test_comparison.csv", stringsAsFactors = F)
+library(pROC)
+library(dplyr)
+library(tidymodels)
+```
+
+The following code chuncks show the confusion matrices, AUC and gain curves of the predictions. We start with the Lasso regression
+```{r}
+confusionMatrix(factor(Combined$EPS_Movement), factor(Combined$LassoPredictions))
+```
+```{r}
+ROC <- roc(factor(Combined$EPS_Movement), Combined$LassoPredictions)
+ROC$auc
+```
+
+```{r}
+gain_curve(Combined, truth = factor(EPS_Movement), estimate = Lasso) %>% autoplot() 
+```
+Followed by the Random Forests:
+```{r}
+confusionMatrix(factor(Combined$EPS_Movement), factor(Combined$RFPredictions))
+```
+
+```{r}
+ROC <- roc(factor(Combined$EPS_Movement), Combined$RFPredictions)
+ROC$auc
+```
+
+```{r}
+gain_curve(Combined, truth = factor(EPS_Movement), estimate = RF) %>% autoplot()
+```
+
+And the gradient boosting machines:
+```{r}
+confusionMatrix(factor(Combined$EPS_Movement), factor(Combined$GBMPredictions))
+```
+
+```{r}
+ROC <- roc(factor(Combined$EPS_Movement), Combined$GBMPredictions)
+ROC$auc
+```
+
+```{r}
+gain_curve(Combined, truth = factor(EPS_Movement), estimate = GBM) %>% autoplot()
+```
+
+Finally, the accuracy and AUC for the IBES predictions have been calculated
+```{r}
+confusionMatrix(factor(Combined$EPS_Movement), factor(Combined$MoveIBES))
+```
+
+```{r}
+ROC <- roc(factor(Combined$EPS_Movement), Combined$MoveIBES)
+ROC$auc
+```
+
+A deeper analysis is then provided in what the differences are between sector, year and size
+
+Observations in Industry
+```{r}
+Combined$Industry <- ifelse(Combined$Industry == "Agriculture, forestry and fishing" | is.na(Combined$Industry), "Other", Combined$Industry)
+nrow(Combined[Combined$Industry == "Manufacturing",])
+nrow(Combined[Combined$Industry == "Transportation, communication and utilities",])
+nrow(Combined[Combined$Industry == "Wholesale and retail trade",])
+nrow(Combined[Combined$Industry == "Services",])
+nrow(Combined[Combined$Industry == "Mining",])
+nrow(Combined[Combined$Industry == "Construction",])
+nrow(Combined[Combined$Industry == "Other",])
+```
+
+Lasso regression + Industry
+```{r}
+accuracy(Combined[Combined$Industry == "Manufacturing",], factor(EPS_Movement), factor(LassoPredictions))
+accuracy(Combined[Combined$Industry == "Transportation, communication and utilities",], factor(EPS_Movement), factor(LassoPredictions))
+accuracy(Combined[Combined$Industry == "Wholesale and retail trade",], factor(EPS_Movement), factor(LassoPredictions))
+accuracy(Combined[Combined$Industry == "Services",], factor(EPS_Movement), factor(LassoPredictions))
+accuracy(Combined[Combined$Industry == "Mining",], factor(EPS_Movement), factor(LassoPredictions))
+accuracy(Combined[Combined$Industry == "Construction",], factor(EPS_Movement), factor(LassoPredictions))
+accuracy(Combined[Combined$Industry == "Other",], factor(EPS_Movement), factor(LassoPredictions))
+```
+
+Random Forests + Industry
+```{r}
+
+accuracy(Combined[Combined$Industry == "Manufacturing",], factor(EPS_Movement), factor(RFPredictions))
+accuracy(Combined[Combined$Industry == "Transportation, communication and utilities",], factor(EPS_Movement), factor(RFPredictions))
+accuracy(Combined[Combined$Industry == "Wholesale and retail trade",], factor(EPS_Movement), factor(RFPredictions))
+accuracy(Combined[Combined$Industry == "Services",], factor(EPS_Movement), factor(RFPredictions))
+accuracy(Combined[Combined$Industry == "Mining",], factor(EPS_Movement), factor(RFPredictions))
+accuracy(Combined[Combined$Industry == "Construction",], factor(EPS_Movement), factor(RFPredictions))
+accuracy(Combined[Combined$Industry == "Other",], factor(EPS_Movement), factor(RFPredictions))
+```
+
+Gradient Boosting Machines + Industry
+```{r}
+accuracy(Combined[Combined$Industry == "Manufacturing",], factor(EPS_Movement), factor(GBMPredictions))
+accuracy(Combined[Combined$Industry == "Transportation, communication and utilities",], factor(EPS_Movement), factor(GBMPredictions))
+accuracy(Combined[Combined$Industry == "Wholesale and retail trade",], factor(EPS_Movement), factor(GBMPredictions))
+accuracy(Combined[Combined$Industry == "Services",], factor(EPS_Movement), factor(GBMPredictions))
+accuracy(Combined[Combined$Industry == "Mining",], factor(EPS_Movement), factor(GBMPredictions))
+accuracy(Combined[Combined$Industry == "Construction",], factor(EPS_Movement), factor(GBMPredictions))
+accuracy(Combined[Combined$Industry == "Other",], factor(EPS_Movement), factor(GBMPredictions))
+```
+
+
+IBES + Industry
+```{r}
+## IBES industry
+accuracy(Combined[Combined$Industry == "Manufacturing",], factor(EPS_Movement), factor(MoveIBES))
+accuracy(Combined[Combined$Industry == "Transportation, communication and utilities",], factor(EPS_Movement), factor(MoveIBES))
+accuracy(Combined[Combined$Industry == "Wholesale and retail trade",], factor(EPS_Movement), factor(MoveIBES))
+accuracy(Combined[Combined$Industry == "Services",], factor(EPS_Movement), factor(MoveIBES))
+accuracy(Combined[Combined$Industry == "Mining",], factor(EPS_Movement), factor(MoveIBES))
+accuracy(Combined[Combined$Industry == "Construction",], factor(EPS_Movement), factor(MoveIBES))
+accuracy(Combined[Combined$Industry == "Other",], factor(EPS_Movement), factor(MoveIBES))
+```
+
+
+Observations in Year
+```{r}
+nrow(Combined[Combined$Year== "2012",])
+nrow(Combined[Combined$Year== "2013",])
+nrow(Combined[Combined$Year == "2014",])
+nrow(Combined[Combined$Year == "2015",])
+nrow(Combined[Combined$Year == "2016",])
+nrow(Combined[Combined$Year == "2017",])
+nrow(Combined[Combined$Year == "2018",])
+nrow(Combined[Combined$Year == "2019",])
+```
+
+Lasso regression + Year
+```{r}
+#Lasso + year
+accuracy(Combined[Combined$Year == "2012",], factor(EPS_Movement), factor(LassoPredictions))
+accuracy(Combined[Combined$Year == "2013",], factor(EPS_Movement), factor(LassoPredictions))
+accuracy(Combined[Combined$Year == "2014",], factor(EPS_Movement), factor(LassoPredictions))
+accuracy(Combined[Combined$Year == "2015",], factor(EPS_Movement), factor(LassoPredictions))
+accuracy(Combined[Combined$Year == "2016",], factor(EPS_Movement), factor(LassoPredictions))
+accuracy(Combined[Combined$Year == "2017",], factor(EPS_Movement), factor(LassoPredictions))
+accuracy(Combined[Combined$Year == "2018",], factor(EPS_Movement), factor(LassoPredictions))
+accuracy(Combined[Combined$Year == "2019",], factor(EPS_Movement), factor(LassoPredictions))
+```
+
+Random Forests + Year
+```{r}
+accuracy(Combined[Combined$Year == "2012",], factor(EPS_Movement), factor(RFPredictions))
+accuracy(Combined[Combined$Year == "2013",], factor(EPS_Movement), factor(RFPredictions))
+accuracy(Combined[Combined$Year == "2014",], factor(EPS_Movement), factor(RFPredictions))
+accuracy(Combined[Combined$Year == "2015",], factor(EPS_Movement), factor(RFPredictions))
+accuracy(Combined[Combined$Year == "2016",], factor(EPS_Movement), factor(RFPredictions))
+accuracy(Combined[Combined$Year == "2017",], factor(EPS_Movement), factor(RFPredictions))
+accuracy(Combined[Combined$Year == "2018",], factor(EPS_Movement), factor(RFPredictions))
+accuracy(Combined[Combined$Year == "2019",], factor(EPS_Movement), factor(RFPredictions))
+```
+
+Gradient Bossting Machines + Year
+```{r}
+accuracy(Combined[Combined$Year == "2012",], factor(EPS_Movement), factor(GBMPredictions))
+accuracy(Combined[Combined$Year == "2013",], factor(EPS_Movement), factor(GBMPredictions))
+accuracy(Combined[Combined$Year == "2014",], factor(EPS_Movement), factor(GBMPredictions))
+accuracy(Combined[Combined$Year == "2015",], factor(EPS_Movement), factor(GBMPredictions))
+accuracy(Combined[Combined$Year == "2016",], factor(EPS_Movement), factor(GBMPredictions))
+accuracy(Combined[Combined$Year == "2017",], factor(EPS_Movement), factor(GBMPredictions))
+accuracy(Combined[Combined$Year == "2018",], factor(EPS_Movement), factor(GBMPredictions))
+accuracy(Combined[Combined$Year == "2019",], factor(EPS_Movement), factor(GBMPredictions))
+```
+
+IBES + Year
+```{r}
+accuracy(Combined[Combined$Year == "2012",], factor(EPS_Movement), factor(MoveIBES))
+accuracy(Combined[Combined$Year == "2013",], factor(EPS_Movement), factor(MoveIBES))
+accuracy(Combined[Combined$Year == "2014",], factor(EPS_Movement), factor(MoveIBES))
+accuracy(Combined[Combined$Year == "2015",], factor(EPS_Movement), factor(MoveIBES))
+accuracy(Combined[Combined$Year == "2016",], factor(EPS_Movement), factor(MoveIBES))
+accuracy(Combined[Combined$Year == "2017",], factor(EPS_Movement), factor(MoveIBES))
+accuracy(Combined[Combined$Year == "2018",], factor(EPS_Movement), factor(MoveIBES))
+accuracy(Combined[Combined$Year == "2019",], factor(EPS_Movement), factor(MoveIBES))
+```
+
+Observations Size
+```{r}
+nrow(Combined[Combined$Size== "<10M",])
+nrow(Combined[Combined$Size== "10M-50M",])
+nrow(Combined[Combined$Size == "50M-200M",])
+nrow(Combined[Combined$Size == "200M-500M",])
+nrow(Combined[Combined$Size == "500M-1B",])
+nrow(Combined[Combined$Size == "1B-2B",])
+nrow(Combined[Combined$Size == "2B-5B",])
+nrow(Combined[Combined$Size == "5B-10B",])
+nrow(Combined[Combined$Size == ">10B",])
+```
+
+Lasso regression + Size
+```{r}
+accuracy(Combined[Combined$Size == "<10M",], factor(EPS_Movement), factor(LassoPredictions))
+accuracy(Combined[Combined$Size == "10M-50M",], factor(EPS_Movement), factor(LassoPredictions))
+accuracy(Combined[Combined$Size == "50M-200M",], factor(EPS_Movement), factor(LassoPredictions))
+accuracy(Combined[Combined$Size == "200M-500M",], factor(EPS_Movement), factor(LassoPredictions))
+accuracy(Combined[Combined$Size == "500M-1B",], factor(EPS_Movement), factor(LassoPredictions))
+accuracy(Combined[Combined$Size == "1B-2B",], factor(EPS_Movement), factor(LassoPredictions))
+accuracy(Combined[Combined$Size == "2B-5B",], factor(EPS_Movement), factor(LassoPredictions))
+accuracy(Combined[Combined$Size == "5B-10B",], factor(EPS_Movement), factor(LassoPredictions))
+accuracy(Combined[Combined$Size == ">10B",], factor(EPS_Movement), factor(LassoPredictions))
+```
+
+Random Forests + Size
+```{r}
+accuracy(Combined[Combined$Size == "<10M",], factor(EPS_Movement), factor(RFPredictions))
+accuracy(Combined[Combined$Size == "10M-50M",], factor(EPS_Movement), factor(RFPredictions))
+accuracy(Combined[Combined$Size == "50M-200M",], factor(EPS_Movement), factor(RFPredictions))
+accuracy(Combined[Combined$Size == "200M-500M",], factor(EPS_Movement), factor(RFPredictions))
+accuracy(Combined[Combined$Size == "500M-1B",], factor(EPS_Movement), factor(RFPredictions))
+accuracy(Combined[Combined$Size == "1B-2B",], factor(EPS_Movement), factor(RFPredictions))
+accuracy(Combined[Combined$Size == "2B-5B",], factor(EPS_Movement), factor(RFPredictions))
+accuracy(Combined[Combined$Size == "5B-10B",], factor(EPS_Movement), factor(RFPredictions))
+accuracy(Combined[Combined$Size == ">10B",], factor(EPS_Movement), factor(RFPredictions))
+```
+
+Gradient Boosting Machines + Size
+```{r}
+accuracy(Combined[Combined$Size == "<10M",], factor(EPS_Movement), factor(GBMPredictions))
+accuracy(Combined[Combined$Size == "10M-50M",], factor(EPS_Movement), factor(GBMPredictions))
+accuracy(Combined[Combined$Size == "50M-200M",], factor(EPS_Movement), factor(GBMPredictions))
+accuracy(Combined[Combined$Size == "200M-500M",], factor(EPS_Movement), factor(GBMPredictions))
+accuracy(Combined[Combined$Size == "500M-1B",], factor(EPS_Movement), factor(GBMPredictions))
+accuracy(Combined[Combined$Size == "1B-2B",], factor(EPS_Movement), factor(GBMPredictions))
+accuracy(Combined[Combined$Size == "2B-5B",], factor(EPS_Movement), factor(GBMPredictions))
+accuracy(Combined[Combined$Size == "5B-10B",], factor(EPS_Movement), factor(GBMPredictions))
+accuracy(Combined[Combined$Size == ">10B",], factor(EPS_Movement), factor(GBMPredictions))
+```
+
+IBES + Size
+```{r}
+accuracy(Combined[Combined$Size == "<10M",], factor(EPS_Movement), factor(MoveIBES))
+accuracy(Combined[Combined$Size == "10M-50M",], factor(EPS_Movement), factor(MoveIBES))
+accuracy(Combined[Combined$Size == "50M-200M",], factor(EPS_Movement), factor(MoveIBES))
+accuracy(Combined[Combined$Size == "200M-500M",], factor(EPS_Movement), factor(MoveIBES))
+accuracy(Combined[Combined$Size == "500M-1B",], factor(EPS_Movement), factor(MoveIBES))
+accuracy(Combined[Combined$Size == "1B-2B",], factor(EPS_Movement), factor(MoveIBES))
+accuracy(Combined[Combined$Size == "2B-5B",], factor(EPS_Movement), factor(MoveIBES))
+accuracy(Combined[Combined$Size == "5B-10B",], factor(EPS_Movement), factor(MoveIBES))
+accuracy(Combined[Combined$Size == ">10B",], factor(EPS_Movement), factor(MoveIBES))
+```
