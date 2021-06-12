@@ -110,8 +110,8 @@ lasso_wf_vi <- workflow() %>%
 
 
 set.seed(12)
-rf_vi_fit <- lasso_wf_vi %>% fit(data = data_test)
-rf_vi_fit %>% pull_workflow_fit() %>% vip(geom = "point", num_features = 20)
+lasso_wf_vi <- lasso_wf_vi %>% fit(data = data_test)
+lasso_wf_vi %>% pull_workflow_fit() %>% vip(geom = "point", num_features = 20)
 ```
 
 
