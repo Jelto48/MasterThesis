@@ -19,6 +19,8 @@ Output file: OutputScraping.csv
 
 Input file: OutputScraping.csv
 
+Intermediate files: Compustat-compare.csv
+
  
 ### Supplementary Document 3 - Data Cleaning (R file)
 Input file: OutputScraping.csv
