@@ -1,0 +1,119 @@
+---
+title: "SupplementaryDocument2-DataQuality"
+author: "Jelto de Jong"
+date: "12/06/2021"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+## Second supplementary coding document used to scrape the XBRL data used for te 
+## business analytics and management master thesis of Jelto de Jong
+
+The reduced file obtained from the scraping algorithm is loaded first, followed by the loading of the Compustat comparison file that includes the available and linked variables. Some adjustments have been made to the data, after which the datasets are linked to eachother.
+
+```{r}
+Complete <- read.csv("OutputScraping.csv")
+
+library(dplyr)
+Comp <- Complete[,colSums(is.na(Complete))<17000]
+Compare <- read.csv("Compustat-Compare.csv")
+Comp$endDate <- as.character(as.Date(Comp$endDate))
+Compare$endDate <- as.character(as.Date(as.character(Compare$datadate ),format="%Y%m%d"))
+Compare$Ticker <- Compare$tic
+tmp <- left_join(Comp, Compare, by = c("endDate", "Ticker"))
+tmp <- tmp %>% distinct(endDate, Ticker, .keep_all = TRUE)
+```
+
+The difference is then calculated between the 20 items with the least NAs. 
+```{r}
+tmp$diff1 <- (tmp$us.gaap_AccountsPayableCurrent.y*1000000 - tmp$us.gaap_AccountsPayableCurrent.x)^2
+tmp$diff2 <- (tmp$us.gaap_AccountsReceivableNetCurrent*1000000 - tmp$us.gaap_AccountsReceivableNetCurrent^2)
+tmp$diff3 <- (tmp$us.gaap_AccumulatedDepreciationDepletionAndAmortizationPropertyPlantAndEquipment.y *1000000 - tmp$us.gaap_AccumulatedDepreciationDepletionAndAmortizationPropertyPlantAndEquipment.x)^2
+tmp$diff4 <- (tmp$us.gaap_AccumulatedOtherComprehensiveIncomeLossNetOfTax.y*1000000 - tmp$us.gaap_AccumulatedOtherComprehensiveIncomeLossNetOfTax.x)^2 
+tmp$diff5 <- (tmp$us.gaap_Assets.y*1000000 - tmp$us.gaap_Assets.x)^2 
+tmp$diff6 <- (tmp$us.gaap_AssetsCurrent.y*1000000 - tmp$us.gaap_AssetsCurrent.x)^2
+tmp$diff7 <- (tmp$us.gaap_CashAndCashEquivalentsAtCarryingValue.y*1000000 - tmp$us.gaap_CashAndCashEquivalentsAtCarryingValue.x)^2
+tmp$diff8 <- (tmp$us.gaap_CommonStockValue.y*1000000 - tmp$us.gaap_CommonStockValue.x)^2
+tmp$diff9 <- (tmp$us.gaap_Depreciation.y*1000000 - tmp$us.gaap_Depreciation.x)^2
+tmp$diff10 <- (tmp$us.gaap_Goodwill.y*1000000 - tmp$us.gaap_Goodwill.x)^2
+tmp$diff11 <- (tmp$us.gaap_LiabilitiesCurrent.y*1000000 - tmp$us.gaap_LiabilitiesCurrent.x)^2
+tmp$diff12 <- (tmp$us.gaap_PropertyPlantAndEquipmentGross.y*1000000 - tmp$us.gaap_PropertyPlantAndEquipmentGross.x)^2
+tmp$diff13 <- (tmp$us.gaap_StockholdersEquity.y*1000000 - tmp$us.gaap_StockholdersEquity.x)^2
+tmp$diff14 <- (tmp$us.gaap_NetIncomeLoss.y*1000000 - tmp$us.gaap_NetIncomeLoss.x)^2
+tmp$diff15 <- (tmp$us.gaap_EarningsPerShareBasic.y - tmp$us.gaap_EarningsPerShareBasic.x)^2
+tmp$diff16 <- (tmp$us.gaap_EarningsPerShareDiluted.y - tmp$us.gaap_EarningsPerShareDiluted.y)^2
+tmp$diff17 <- (tmp$us.gaap_Liabilities.y - tmp$us.gaap_Liabilities.x)^2
+tmp$diff18 <- (tmp$us.gaap_OtherAssetsNoncurrent - tmp$us.gaap_OtherAssetsNoncurrent^2)
+tmp$diff19 <- (tmp$us.gaap_ShareBasedCompensation.y - tmp$us.gaap_ShareBasedCompensation.x)^2
+tmp$diff20 <- (tmp$us.gaap_CurrentFederalTaxExpenseBenefit.y - tmp$us.gaap_CurrentFederalTaxExpenseBenefit.x)^2
+```
+
+The next code chunk shows how the summary table for the XBRL data compared to Compustat data has been created
+```{r warning=FALSE}
+Table <- data.frame(MatchedObservation = numeric(),
+                    Equal = numeric(),
+                    Unequal = numeric(),
+                    AverageDeviation = numeric(),
+                    RMSPE = numeric())
+for(i in 1:20){
+Table[i,1] <- sum(!is.na(tmp[,78+i]))  
+tmp[,78+i] <- ifelse(is.na(tmp[,78+i]), 0, tmp[,78+i])
+Table[i,2] <- sum(tmp[,78+i] == 0, na.rm = TRUE)/sum(!is.na(tmp[,78+i]))
+Table[i,3] <- sum(tmp[,78+i] != 0, na.rm = TRUE)/sum(!is.na(tmp[,78+i]))
+Table[i,4] <- mean(sqrt(tmp[,78+i]), na.rm = TRUE)
+Table[i,5] <- sqrt(mean(sqrt(tmp[,78+i]), na.rm = TRUE)/mean(tmp[,78+i]))*100
+}
+```
+
+```{r include=FALSE}
+Table <- read.csv("Table1.csv")
+```
+
+This can then be used to provide the summary table of the data quality
+```{r}
+Table
+```
+Next, the XBRL data quality can be visualised. This is done by calculating the RMSPE and average deviation per year and per XBRL item.
+```{r warning=FALSE}
+Visual <- data.frame(Year = as.character(),
+                     Variable = as.character(),
+                     AverageDev = as.numeric(),
+                     RMSPE = as.numeric())
+
+for(year in c(2012:2020)){
+tmp2 <- tmp[tmp$Year == year,]
+for(j in 1:9){
+  for(i in 1:20){
+Visual[i+((j-1)*20),1] <- as.character(year)
+Visual[i+((j-1)*20),2] <- as.character(Table$ï..XBRL.Tag[i])
+Visual[i+((j-1)*20),3] <- mean(sqrt(tmp2[,78+i]), na.rm = TRUE)
+Visual[i+((j-1)*20),4] <- sqrt(mean(sqrt(tmp[,78+i]), na.rm = TRUE)/mean(tmp[,78+i]))*100
+     }
+   }
+}
+
+```
+
+```{r include=FALSE}
+Visual <- read.csv("Visual.csv")
+```
+
+The following plot shows the move in RMSPE
+```{r}
+library(ggplot2)
+library(scales)
+theme_set(theme_minimal())
+ggplot(Visual,aes(y = RMSPE,x = Year,color = Variable)) + 
+  geom_line() + theme(axis.text=element_text(size=14), legend.text=element_text(size=14)) +
+  ggtitle("RMSPE XBRL vs Compustat Fundamentals")
+```
+
+This plot shows the move in average deviation
+```{r}
+ggplot(Visual,aes(y = AverageDev,x = Year,color = Variable)) + 
+  geom_line() + scale_y_continuous(labels = comma)+ 
+  geom_line() + theme(axis.text=element_text(size=14), legend.text=element_text(size=14))+
+  ggtitle("Average Deviation XBRL vs Compustat Fundamentals")
+```
+
