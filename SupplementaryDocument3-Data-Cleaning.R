@@ -161,7 +161,50 @@ ID <- read.csv("Identifying.csv")
 ID2 <- ID[ID$Remove == 1,]
 ID2 <- as.character(ID2$ï..Ticker)
 MlDataset <- MlDataset[!MlDataset$Ticker %in% ID2,]
+
+## Create summary table used in data chapter
+colnames(ID) <- c("Ticker", "Sic", "Remove")
+SUMMARY <- left_join(MlDataset, ID, by = ("Ticker" = "Ticker"))
+SUMMARY <- SUMMARY %>% select(Ticker, Year, us.gaap_Assets, Sic, EPS_Movement)
+
+Summary <- SUMMARY %>% group_by(Year) %>%  summarise(n = n())
+Summary[4:11,]
+
+options("scipen"=100, "digits"=4)
+
+Summary <- SUMMARY %>% group_by(Year) %>%  summarise(n = n())
+Summary[3:10,]
+
+## Categorise total assets 
+SUMMARY$Size <- ifelse(SUMMARY$us.gaap_Assets<10000000, "<10M",
+                ifelse(SUMMARY$us.gaap_Assets>10000000 & SUMMARY$us.gaap_Assets<50000000,"10M-50M",
+                ifelse(SUMMARY$us.gaap_Assets>50000000 & SUMMARY$us.gaap_Assets<200000000,"50M-200M",
+                ifelse(SUMMARY$us.gaap_Assets>200000000 & SUMMARY$us.gaap_Assets<500000000,"200M-500M",
+                ifelse(SUMMARY$us.gaap_Assets>500000000 & SUMMARY$us.gaap_Assets<1000000000,"500M-1B",
+                ifelse(SUMMARY$us.gaap_Assets>1000000000 & SUMMARY$us.gaap_Assets<2000000000,"1B-2B",
+                ifelse(SUMMARY$us.gaap_Assets>2000000000 & SUMMARY$us.gaap_Assets<5000000000,"2B-5B",
+                ifelse(SUMMARY$us.gaap_Assets>5000000000 & SUMMARY$us.gaap_Assets<10000000000,"5B-10B",
+                ifelse(SUMMARY$us.gaap_Assets>10000000000,">10B","")))))))))
+
+
+Summary <- SUMMARY %>% group_by(Size) %>%  summarise(n = n())
+Summary[4:11,]
+
+## Categorise sector
+SUMMARY$Industry <- ifelse(SUMMARY$Sic <1000, "Agriculture, forestry and fishing",
+                    ifelse(SUMMARY$Sic>=1000 & SUMMARY$Sic<1500,"Mining",
+                    ifelse(SUMMARY$Sic>=1500 & SUMMARY$Sic<1800,"Construction",
+                    ifelse(SUMMARY$Sic>=2000 & SUMMARY$Sic<4000,"Manufacturing",
+                    ifelse(SUMMARY$Sic>=4000 & SUMMARY$Sic<5000,"Transportation, communication and utilities",
+                    ifelse(SUMMARY$Sic>=5000 & SUMMARY$Sic<6000,"Wholesale and retail trade",
+                    ifelse(SUMMARY$Sic>=7000 & SUMMARY$Sic<9000,"Services",
+                    ifelse(SUMMARY$Sic>=9000 & SUMMARY$Sic<10000,"Public administration",""))))))))
+
+
+Summary <- SUMMARY %>% group_by(Industry) %>%  summarise(n = n())
+Summary
+
+## Log transformation of total Assets
+MlDataset$us.gaap_Assets <- log(MlDataset$us.gaap_Assets)
+
 #write.csv(MlDataset, "MlDataset.csv", row.names = F)
-
-
-
