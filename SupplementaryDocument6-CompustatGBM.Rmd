@@ -6,7 +6,7 @@ This file shows the additional analysis added to the thesis that applies the gra
 
 ## Data transformation
 ```{r}
-CompustatML <- read.csv("CompustatML.csv")
+CompustatML <- read.csv("CompustatML2.csv")
 ```
 
 First, the observations without reported or with negative total assets have been removed
@@ -198,7 +198,6 @@ xgb_final_fit <- xgb_final_wf %>%
 
 xgb_final_fit %>% collect_predictions() %>% 
   conf_mat(truth = EPS_Movement, estimate = .pred_class) 
-confusionMatrix(factor(Combined$EPS_Movement), factor(Combined$GBMPredictions))
 ```
 
 ```{r}
