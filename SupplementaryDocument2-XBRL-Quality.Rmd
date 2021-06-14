@@ -11,6 +11,7 @@ The reduced file obtained from the scraping algorithm is loaded first, followed 
 
 ```{r message=FALSE, warning=FALSE}
 Complete <- read.csv("OutputScraping.csv")
+Compare$endDate <- as.character(as.Date(as.character(Complete$endDate),format="%d/%m/%Y"))
 
 library(dplyr)
 Comp <- Complete[,colSums(is.na(Complete))<17000]
