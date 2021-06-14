@@ -44,3 +44,9 @@ Output file: test_comparison.csv
 *Includes HTML file used to visualise part of the code*
 
 Input file: test_comparison.csv
+
+
+### Supplementary Document 6 - Compustat GBM (RMD file)
+*Includes HTML file used to visualise part of the code*
+
+Input file: CompuML2.csv
