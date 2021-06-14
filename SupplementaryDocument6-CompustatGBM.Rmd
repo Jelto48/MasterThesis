@@ -1,0 +1,209 @@
+---
+title: "Additional analysis"
+output: html_notebook
+---
+This file shows the additional analysis added to the thesis that applies the gradient boosting machines algorithm on Compustat fundamental data. This has been done on the same dataset used for the data accuracy predictions and contains observations of the included tickers in the XBRL sample and the years 2012-2020
+
+## Data transformation
+```{r}
+CompustatML <- read.csv("CompustatML.csv")
+```
+
+First, the observations without reported or with negative total assets have been removed
+```{r message=FALSE, warning=FALSE}
+library(dplyr)
+CompustatML<- CompustatML[-which(is.na(CompustatML$at)),]
+CompustatML <- CompustatML[which(CompustatML$at >0),]
+CompustatML <- CompustatML %>%  distinct(tic, fyear, datadate, .keep_all = TRUE)
+CompustatML <- CompustatML %>%  arrange(tic, desc((fyear)))
+```
+
+Similar to the XBRL data transformation, the Compustat data is also needed to include 3 years of consecutive data. This is classified in the following code
+```{r}
+## Obtain Ticker, Publication year and Fiscal year 
+New <- CompustatML[,c(3,1,2)]
+New$Indicator[1] <- "Last"
+
+## Last, Middle or First is assigned based on how the observation compares to the past and previous observation
+for(i in 2:nrow(New)){
+  New$Indicator[i] <- ifelse(New[i,1] != New[i-1,1]& New[i,1] == New[i+1,1] & 
+                       as.numeric(New[i,3]) == as.numeric(New[i+1,3])+1,"Last",ifelse(New[i,1] == New[i-1,1]& 
+                       New[i,1] == New[i+1,1] & as.numeric(New[i,3]) == as.numeric(New[i+1,3])+1 & 
+                         as.numeric(New[i,3]) != as.numeric(New[i-1,3]-1),"Last",
+                         ifelse(New[i,1] == New[i-1,1]& New[i,1] == New[i+1,1] & as.numeric(New[i,3]) == as.numeric(New[i+1,3])+1 & 
+                         as.numeric(New[i,3]) == as.numeric(New[i-1,3])-1,"Middle", ifelse(New[i,1] == New[i-1,1] & New[i,1] != New[i+1,1] & 
+                         as.numeric(New[i,3]) == as.numeric(New[i-1,3])-1,"First",ifelse(New[i,1] == New[i-1,1] & New[i,1] == New[i+1,1] & 
+                         as.numeric(New[i,3]) == as.numeric(New[i-1,3])-1 & as.numeric(New[i,3]) != as.numeric(New[i+1,3])+1,"First","No")))))
+}
+CompustatML$Indicator <- New$Indicator
+rm(New)
+```
+
+The observations not of use are then removed and columns with many missing values have been removed
+
+```{r}
+## Filter out unclassified observations and observations with many missing values
+CompustatML <- CompustatML[CompustatML$Indicator != "No",]
+CompustatML <- CompustatML[rowSums(is.na(CompustatML))<800,]
+CompustatML <- CompustatML[,colSums(is.na(CompustatML))<15000]
+CompustatML[is.na(CompustatML)] <- 0 
+```
+
+
+The same steps applied to the XBRL data have then been applied where lagged and delta variables have been created and stored in a single machine learning output file
+```{r message=FALSE, warning=FALSE}
+Complete2 <- CompustatML
+rm(CompustatML)
+## First the variables have been divided by the total assets if they are not already a percentage or a per share item
+for(i in c(5:27,29:108, 113:306)){
+  Complete2[,i] <- ifelse(abs(Complete2[,i])>10, Complete2[,i]/Complete2$at, Complete2[,i])
+}
+
+## The previous year observations are then stored as lagged variables
+Lagged <- Complete2[,5:306]
+for(i in 1:nrow(Complete2)){
+  ifelse(Complete2$Indicator[i] == "Middle", Lagged[i,1:302] <- Complete2[i+1,5:306],Lagged[i,1:302] <- "")  
+}
+colnames(Lagged) <- paste0("Lagged_", colnames(Lagged))
+Complete2 <- cbind(Complete2, Lagged)
+rm(Lagged)
+
+## A delta variable is then calculated including the percentage change of the current year and lagged value
+Delta <- Complete2[,c(5:306)]
+for(i in 1:nrow(Complete2)){
+  Delta[i,1:302] <- (as.numeric(Complete2[i,5:306])-as.numeric(Complete2[i,308:609]))/as.numeric(Complete2[i,308:609]) 
+}
+colnames(Delta) <- paste0("Delta_", colnames(Delta))
+
+Complete2 <- cbind(Complete2, Delta)
+rm(Delta)
+Complete3 <- Complete2
+rm(Complete2)
+#write.csv(Complete3, "CompuML.csv", row.names = F)
+#Complete3 <- read.csv("CompuML.csv")
+
+## Winsorise columns at a 1% level
+library(DescTools)
+for(i in c(5:306,308:911)){
+  Complete3[,i] <- Winsorize(Complete3[,i], na.rm=TRUE) 
+}
+
+Complete3$OneYearForwardEPS <- NA
+for(i in 1:nrow(Complete3)){
+  if(Complete3$Indicator[i] == "Middle"){
+    Complete3$OneYearForwardEPS[i] <- Complete3$epspi[i-1]
+  }
+}
+
+## Only take into account observations that show to have a previous and a future year available
+MlDataset <- Complete3[Complete3$Indicator == "Middle",]
+rm(Complete3)
+
+## Adjust date variable
+MlDataset$datadate <- as.character(as.Date(as.character(MlDataset$datadate),format="%Y%m%d"))
+
+## Create earnings per share movement dependent variable by looking at the up or down move of EPS
+MlDataset$OneYearForwardEPS <- Winsorize(MlDataset$OneYearForwardEPS, na.rm=TRUE) 
+MlDataset$EPS_Movement <- as.factor(ifelse((MlDataset$OneYearForwardEPS - MlDataset$epspi)>0, 1,0))
+MlDataset <- MlDataset %>% select(-Indicator)
+
+## Filter and save final output file
+MlDataset[is.na(MlDataset)] <- 0
+MlDataset <- MlDataset[,colSums(MlDataset == 0)<10000]
+
+## Log transformation of total Assets
+MlDataset$at <- log(MlDataset$at)
+```
+
+## Gradient Boosting machines
+
+The same machine learning tuning steps for the gradient boositng machines model on XBRL data have then been applied to the Compustat data
+```{r}
+library(tidymodels)
+library(dplyr)
+library(tidymodels)
+library(doParallel)
+library(themis)
+library(xgboost)
+
+## Create train/test split and assign cross validation set
+set.seed(12)
+model_split <- initial_split(MlDataset, prop = 0.8, strata = EPS_Movement)
+data_train <- training(model_split)
+data_test <- testing(model_split)
+set.seed(12)
+cv_folds <- vfold_cv(data_train, v = 10, strata = EPS_Movement)
+
+## Set up recipe, tune model and workflow
+xgb_recipe <- recipe(EPS_Movement ~ ., data = data_train) %>% step_rm(datadate, fyear, tic, fyr, OneYearForwardEPS)
+
+xgb_model_tune <- 
+  boost_tree(trees = tune(), tree_depth = tune(), 
+             learn_rate = tune(), stop_iter = 500) %>%
+  set_mode("classification") %>%
+  set_engine("xgboost")
+
+xgb_tune_wf <- workflow() %>%
+  add_recipe(xgb_recipe) %>%
+  add_model(xgb_model_tune)
+
+xgb_grid <- expand.grid(trees = 1500, 
+                        learn_rate = 0.03, 
+                        tree_depth = 2)
+
+xgb_grid <- expand.grid(trees = 500 * 2:4, 
+                        learn_rate = c(0.1, 0.03, 0.01), 
+                        tree_depth = 1:3)
+
+## Define test metrics and tune model
+class_metrics <- metric_set(accuracy, kap,  roc_auc)
+
+registerDoParallel()
+set.seed(12)
+xgb_tune_res <- tune_grid(
+  xgb_tune_wf,
+  resamples = cv_folds,
+  grid = xgb_grid,
+  metrics = class_metrics
+)
+```
+
+Based on the model tuning, the best parameters are visualised and selected
+```{r}
+xgb_tune_metrics <- xgb_tune_res %>%
+  collect_metrics()
+
+xgb_tune_metrics %>% 
+  filter(.metric == "accuracy") %>% 
+  ggplot(aes(x = trees, y = mean, 
+             colour = factor(tree_depth))) +
+  geom_path() +
+  labs(y = "Accuracy") + 
+  facet_wrap(~ learn_rate)
+```
+
+These parameters are added to the final model and the model is applied on the test set
+```{r}
+xgb_best <- xgb_tune_metrics %>% 
+  filter(.metric == "accuracy", tree_depth == 2, learn_rate == 0.03, trees == 2000)
+xgb_final_wf <- finalize_workflow(xgb_tune_wf, xgb_best)
+
+xgb_final_fit <- xgb_final_wf %>%
+  last_fit(model_split, metrics = class_metrics)
+```
+
+# Results
+
+```{r}
+
+xgb_final_fit %>% collect_predictions() %>% 
+  conf_mat(truth = EPS_Movement, estimate = .pred_class) 
+confusionMatrix(factor(Combined$EPS_Movement), factor(Combined$GBMPredictions))
+```
+
+```{r}
+xgb_final_fit %>% collect_predictions() %>% 
+  gain_curve(EPS_Movement, .pred_0) %>% 
+  autoplot()
+```
+
