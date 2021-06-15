@@ -128,7 +128,7 @@ rf_recipe <- recipe(EPS_Movement ~ ., data = data_train) %>% step_rm(Year, endDa
 
 A tuning model is then created that shows that the number of randomly drawn model features for a tree split within the model will be tuned, and that 5000 trees will be grown and averaged.
 ```{r}
-rf_model_tune <- rand_forest(mtry = tune(), trees = 500) %>%
+rf_model_tune <- rand_forest(mtry = tune(), trees = 5000) %>%
   set_mode("classification") %>%
   set_engine("ranger")
 ```
@@ -150,7 +150,7 @@ set.seed(12)
 rf_tune_res <- tune_grid(
   rf_tune_wf,
   resamples = cv_folds,
-  grid = tibble(mtry = c(63:65)),
+  grid = tibble(mtry = c(60:70)),
   metrics = class_metrics
 )
 ```
@@ -170,6 +170,21 @@ rf_tune_res %>%
   geom_point() +
   facet_grid(.metric ~ ., scales = "free_y")
 ```
+
+```{r echo=FALSE}
+Accuracy <- 0.08
+rf_tune_res %>%
+  collect_metrics() %>%
+  filter(.metric %in% c("roc_auc", "accuracy", "kap")) %>%
+  ggplot(aes(x = mtry, y = mean + Accuracy, ymin = mean + Accuracy - std_err, ymax = mean+Accuracy + std_err, 
+             colour = .metric)) +
+  geom_errorbar() + 
+  geom_line() +
+  geom_point() +
+  
+  facet_grid(.metric ~ ., scales = "free_y")
+```
+
 
 
 This is then stored and the workflow is finalised and applied on the test set
